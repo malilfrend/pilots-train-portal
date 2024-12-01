@@ -9,7 +9,6 @@ interface ExerciseListProps {
 }
 
 export function ExerciseList({ sessionId }: ExerciseListProps) {
-  console.log('sessionId :', sessionId)
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -17,7 +16,7 @@ export function ExerciseList({ sessionId }: ExerciseListProps) {
   useEffect(() => {
     async function fetchExercises() {
       try {
-        const response = await fetch(`/api/sessions/${sessionId}/exercises`)
+        const response = await fetch(`/api/sessions/${sessionId}/exercises?sessionId=${sessionId}`)
         if (!response.ok) throw new Error('Ошибка загрузки упражнений')
         const data = await response.json()
         setExercises(data)
