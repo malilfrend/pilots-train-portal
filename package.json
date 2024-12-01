@@ -4,13 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "npx prisma generate && next build",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
     "db:migrate:dev": "dotenv -e .env.development -- npx prisma migrate dev",
     "db:reset": "dotenv -e .env.development -- npx prisma migrate reset",
+    "prepare": "husky",
     "check-types": "tsc --noEmit",
     "lint-staged": "lint-staged"
   },
