@@ -15,7 +15,8 @@
     "check-types": "tsc --noEmit",
     "lint-staged": "lint-staged",
     "postinstall": "prisma generate",
-    "vercel-build": "prisma generate && next build"
+    "vercel-build": "prisma generate && next build",
+    "db:seed:prod": "dotenv -e .env -- npx prisma db seed"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

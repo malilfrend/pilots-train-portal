@@ -41,6 +41,3 @@ next-env.d.ts
 
 # prisma
 /prisma/generated/
-/prisma/seed.ts
-
-docker-compose.yml
