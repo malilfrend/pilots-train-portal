@@ -1,17 +1,19 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 
 // Редактирование комментария
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest) {
   try {
     const session = await getSession()
     if (!session) {
       return NextResponse.json({ error: 'Необходима авторизация' }, { status: 401 })
     }
 
+    const commentID = parseInt(request.nextUrl.searchParams.get('id') ?? '')
+
     const comment = await prisma.comment.findUnique({
-      where: { id: parseInt(params.id) },
+      where: { id: commentID },
       include: { author: true },
     })
 
@@ -28,7 +30,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const { content } = body
 
     const updatedComment = await prisma.comment.update({
-      where: { id: parseInt(params.id) },
+      where: { id: commentID },
       data: { content },
       include: {
         author: {
@@ -50,15 +52,18 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 }
 
 // Удаление комментария
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest) {
   try {
     const session = await getSession()
     if (!session) {
       return NextResponse.json({ error: 'Необходима авторизация' }, { status: 401 })
     }
 
+    const commentID = parseInt(request.nextUrl.searchParams.get('id') ?? '')
+
     const comment = await prisma.comment.findUnique({
-      where: { id: parseInt(params.id) },
+      // where: { id: parseInt(params.id) },
+      where: { id: commentID },
       include: { author: true },
     })
 
@@ -72,7 +77,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     }
 
     await prisma.comment.delete({
-      where: { id: parseInt(params.id) },
+      where: { id: commentID },
     })
 
     return NextResponse.json({ success: true })

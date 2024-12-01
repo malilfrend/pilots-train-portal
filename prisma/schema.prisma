@@ -51,7 +51,7 @@ model Exercise {
 
 model Comment {
   id         Int      @id @default(autoincrement())
-  content    String   // Текст комментария
+  content    String
   exercise   Exercise @relation(fields: [exerciseId], references: [id])
   exerciseId Int
   author     User     @relation(fields: [authorId], references: [id])

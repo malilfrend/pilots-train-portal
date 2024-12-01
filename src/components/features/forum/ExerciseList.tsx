@@ -9,6 +9,7 @@ interface ExerciseListProps {
 }
 
 export function ExerciseList({ sessionId }: ExerciseListProps) {
+  console.log('sessionId :', sessionId)
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

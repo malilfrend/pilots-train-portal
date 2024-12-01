@@ -6,7 +6,7 @@ declare global {
 }
 
 const prismaClientSingleton = () => {
-  return new PrismaClient()
+  return new PrismaClient().$extends({})
 }
 
 const prisma = globalThis.prisma ?? prismaClientSingleton()
@@ -14,5 +14,7 @@ const prisma = globalThis.prisma ?? prismaClientSingleton()
 export default prisma
 
 if (process.env.NODE_ENV !== 'production') {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-expect-error
   globalThis.prisma = prisma
 }

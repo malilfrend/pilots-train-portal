@@ -1,13 +1,15 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 
 // Получить комментарии к упражнению
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest) {
   try {
+    const exerciseID = parseInt(request.nextUrl.searchParams.get('id') ?? '')
+
     const comments = await prisma.comment.findMany({
       where: {
-        exerciseId: parseInt(params.id),
+        exerciseId: exerciseID,
       },
       include: {
         author: {
@@ -32,7 +34,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 }
 
 // Добавить комментарий
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest) {
   try {
     const session = await getSession()
     if (!session) {
@@ -42,10 +44,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const body = await request.json()
     const { content } = body
 
+    const exerciseID = parseInt(request.nextUrl.searchParams.get('id') ?? '')
+
     const comment = await prisma.comment.create({
       data: {
         content,
-        exerciseId: parseInt(params.id),
+        exerciseId: exerciseID,
         authorId: session.id as number,
       },
       include: {
