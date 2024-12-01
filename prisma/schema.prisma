@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("STORAGE_DATABASE_URL")
+  directUrl = env("STORAGE_DATABASE_URL")
 }
 
 enum UserRole {
@@ -58,4 +59,4 @@ model Comment {
   authorId   Int
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-} 
+}
