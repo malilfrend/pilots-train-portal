@@ -23,7 +23,6 @@ export function SessionCard({ session, isInstructorMode = false }: SessionCardPr
               <p className="text-gray-600 mb-2">{session.description}</p>
               <div className="text-sm text-gray-500">{session.exercises.length} упражнений</div>
             </div>
-            <div className="text-2xl font-bold text-blue-600">{session.number}</div>
           </div>
         </Link>
         <button
@@ -46,7 +45,7 @@ export function SessionCard({ session, isInstructorMode = false }: SessionCardPr
 
       {isExpanded && (
         <div className="border-t">
-          <ExerciseList sessionId={session.id} isInstructorMode={isInstructorMode} />
+          <ExerciseList sessionId={session.id} />
         </div>
       )}
     </div>

@@ -1,15 +1,15 @@
-import { SignJWT, jwtVerify } from 'jose'
+import { SignJWT, jwtVerify, JWTPayload } from 'jose'
 import { cookies } from 'next/headers'
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'default-secret-key')
 
-interface TokenPayload {
-  id: number
-  email: string
-  role: string
-}
+// interface TokenPayload {
+//   id: number
+//   email: string
+//   role: string
+// }
 
-export async function createToken(payload: TokenPayload) {
+export async function createToken(payload: JWTPayload) {
   return await new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -20,7 +20,7 @@ export async function createToken(payload: TokenPayload) {
 export async function verifyToken(token: string) {
   try {
     const { payload } = await jwtVerify(token, secret)
-    return payload as TokenPayload
+    return payload
   } catch {
     return null
   }

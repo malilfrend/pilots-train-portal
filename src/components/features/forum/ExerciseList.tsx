@@ -34,7 +34,7 @@ export function ExerciseList({ sessionId }: ExerciseListProps) {
   if (error) return <div className="text-red-500">Ошибка: {error}</div>
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-white rounded-lg shadow">
       {exercises.map((exercise) => (
         <ExerciseCard
           key={exercise.id}

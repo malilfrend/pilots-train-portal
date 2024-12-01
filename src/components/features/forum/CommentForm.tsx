@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { LoadingButton } from '@/components/ui/loading-button'
+import { Comment } from '@/types/forum'
 
 interface CommentFormProps {
   exerciseId: number

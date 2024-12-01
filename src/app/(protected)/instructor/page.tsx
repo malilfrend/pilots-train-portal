@@ -15,7 +15,7 @@ export default function InstructorPage() {
           Здесь вы можете управлять тренажерными сессиями и оставлять комментарии с рекомендациями
         </p>
       </div>
-      <SessionList isInstructorMode={true} />
+      <SessionList />
     </div>
   )
 }
