@@ -6,7 +6,29 @@ declare global {
 }
 
 const prismaClientSingleton = () => {
-  return new PrismaClient().$extends({})
+  const config = {
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL,
+      },
+    },
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    Object.assign(config, {
+      __internal: {
+        engine: {
+          cwd: process.cwd(),
+          binaryPath: undefined,
+          connectionString: process.env.DATABASE_URL,
+          enableDebugLogs: false,
+          allowTriggerPanic: false,
+        },
+      },
+    })
+  }
+
+  return new PrismaClient(config)
 }
 
 const prisma = globalThis.prisma ?? prismaClientSingleton()
@@ -14,7 +36,5 @@ const prisma = globalThis.prisma ?? prismaClientSingleton()
 export default prisma
 
 if (process.env.NODE_ENV !== 'production') {
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
   globalThis.prisma = prisma
 }
