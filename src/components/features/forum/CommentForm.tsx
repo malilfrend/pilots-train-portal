@@ -22,13 +22,17 @@ export function CommentForm({ exerciseId, onCommentAdded }: CommentFormProps) {
       setLoading(true)
       setError(null)
 
-      const response = await fetch(`/api/exercises/${exerciseId}/comments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ content }),
-      })
+      console.log('JSON.stringify({ content }) :', JSON.stringify({ content }))
+      const response = await fetch(
+        `/api/exercises/${exerciseId}/comments?exerciseId=${exerciseId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ content }),
+        }
+      )
 
       if (!response.ok) {
         const data = await response.json()

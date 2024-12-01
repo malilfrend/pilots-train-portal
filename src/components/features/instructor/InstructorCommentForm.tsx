@@ -43,6 +43,7 @@ export function InstructorCommentForm({ exerciseId, onCommentAdded }: Instructor
         placeholder="Добавьте комментарий..."
         className="w-full p-3 border rounded-lg mb-2"
         rows={3}
+        name="content"
       />
       <LoadingButton loading={loading} disabled={!content.trim()}>
         Отправить

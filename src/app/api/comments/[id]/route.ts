@@ -10,10 +10,13 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Необходима авторизация' }, { status: 401 })
     }
 
-    const commentID = parseInt(request.nextUrl.searchParams.get('id') ?? '')
+    const body = await request.json()
+    const { content, commentId } = body
+
+    console.log('commentID :', commentId)
 
     const comment = await prisma.comment.findUnique({
-      where: { id: commentID },
+      where: { id: commentId },
       include: { author: true },
     })
 
@@ -26,11 +29,8 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Нет прав на редактирование' }, { status: 403 })
     }
 
-    const body = await request.json()
-    const { content } = body
-
     const updatedComment = await prisma.comment.update({
-      where: { id: commentID },
+      where: { id: commentId },
       data: { content },
       include: {
         author: {
@@ -62,7 +62,6 @@ export async function DELETE(request: NextRequest) {
     const commentID = parseInt(request.nextUrl.searchParams.get('id') ?? '')
 
     const comment = await prisma.comment.findUnique({
-      // where: { id: parseInt(params.id) },
       where: { id: commentID },
       include: { author: true },
     })

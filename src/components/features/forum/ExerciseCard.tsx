@@ -45,7 +45,7 @@ export function ExerciseCard({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content: newContent }),
+        body: JSON.stringify({ content: newContent, commentId }),
       })
 
       if (!response.ok) throw new Error('Ошибка при редактировании комментария')

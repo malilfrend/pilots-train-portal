@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { content } = body
 
-    const exerciseID = parseInt(request.nextUrl.searchParams.get('id') ?? '')
+    const exerciseID = parseInt(request.nextUrl.searchParams.get('exerciseId') ?? '')
 
     const comment = await prisma.comment.create({
       data: {
@@ -63,8 +63,9 @@ export async function POST(request: NextRequest) {
         },
       },
     })
+    console.log('comment :', comment)
 
-    return NextResponse.json(comment)
+    return Response.json(comment)
   } catch (error) {
     console.error('Comment creation error:', error)
     return NextResponse.json({ error: 'Ошибка при создании комментария' }, { status: 500 })
