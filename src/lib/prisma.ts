@@ -1,40 +1,18 @@
-/* eslint-disable no-var */
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { PrismaClient } from '@prisma/client'
 
-declare global {
-  var prisma: PrismaClient | undefined
-}
+let prisma
 
-const prismaClientSingleton = () => {
-  const config = {
-    datasources: {
-      db: {
-        url: process.env.DATABASE_URL,
-      },
-    },
+if (process.env.NODE_ENV === 'production') {
+  prisma = new PrismaClient()
+} else {
+  // @ts-expect-error
+  if (!global.prisma) {
+    // @ts-expect-error
+    global.prisma = new PrismaClient()
   }
-
-  if (process.env.NODE_ENV === 'production') {
-    Object.assign(config, {
-      __internal: {
-        engine: {
-          cwd: process.cwd(),
-          binaryPath: undefined,
-          connectionString: process.env.DATABASE_URL,
-          enableDebugLogs: false,
-          allowTriggerPanic: false,
-        },
-      },
-    })
-  }
-
-  return new PrismaClient(config)
+  // @ts-expect-error
+  prisma = global.prisma
 }
-
-const prisma = globalThis.prisma ?? prismaClientSingleton()
 
 export default prisma
-
-if (process.env.NODE_ENV !== 'production') {
-  globalThis.prisma = prisma
-}
