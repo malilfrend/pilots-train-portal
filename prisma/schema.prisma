@@ -23,6 +23,8 @@ model User {
   birthDate     DateTime
   university    String?
   company       String?
+  experience    String?   // Опыт работы
+  position      String?   // Должность
   role          UserRole  @default(PILOT)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

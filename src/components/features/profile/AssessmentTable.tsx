@@ -1,14 +1,6 @@
 'use client'
 
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/shared/ui/table'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 import { Assessment, COMPETENCIES, CompetencyCode } from '@/types/assessment'
 
 interface AssessmentTableProps {

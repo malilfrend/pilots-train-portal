@@ -10,6 +10,8 @@ interface User {
   role: 'PILOT' | 'INSTRUCTOR' | 'SUPER_ADMIN'
   university?: string
   company?: string
+  experience?: string
+  position?: string
 }
 
 interface AuthContextType {

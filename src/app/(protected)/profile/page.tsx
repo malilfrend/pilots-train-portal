@@ -1,5 +1,4 @@
 import { ProfileInfo } from '@/components/features/profile/ProfileInfo'
-import { TrainingDiary } from '@/components/features/profile/TrainingDiary'
 import { ProfileAssessments } from '@/components/features/profile/ProfileAssessments'
 import { Metadata } from 'next'
 
@@ -13,7 +12,6 @@ export default function ProfilePage() {
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <ProfileInfo />
       <ProfileAssessments />
-      <TrainingDiary />
     </div>
   )
 }

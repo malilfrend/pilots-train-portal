@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import { hash } from 'bcrypt'
 
 const prisma = new PrismaClient()
 
@@ -7,6 +8,40 @@ async function main() {
   await prisma.comment.deleteMany()
   await prisma.exercise.deleteMany()
   await prisma.session.deleteMany()
+  await prisma.user.deleteMany()
+
+  // Создаем тестового пользователя
+  const hashedPassword = await hash('password123', 10)
+  
+  await prisma.user.create({
+    data: {
+      email: 'pilot@example.com',
+      password: hashedPassword,
+      firstName: 'Иван',
+      lastName: 'Петров',
+      birthDate: new Date('1985-05-15'),
+      role: 'PILOT',
+      university: 'Московский авиационный институт',
+      company: 'Аэрофлот',
+      position: 'Второй пилот Boeing 737',
+      experience: '5 лет летного стажа, 3500 часов налета'
+    }
+  })
+  
+  await prisma.user.create({
+    data: {
+      email: 'instructor@example.com',
+      password: hashedPassword,
+      firstName: 'Сергей',
+      lastName: 'Иванов',
+      birthDate: new Date('1975-08-10'),
+      role: 'INSTRUCTOR',
+      university: 'Ульяновский институт гражданской авиации',
+      company: 'Авиационный учебный центр',
+      position: 'Старший инструктор',
+      experience: '20 лет летного стажа, 12000 часов налета'
+    }
+  })
 
   const sessions = [
     {

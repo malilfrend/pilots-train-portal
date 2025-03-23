@@ -34,6 +34,8 @@ export async function GET() {
         role: user.role,
         university: user.university,
         company: user.company,
+        experience: user.experience,
+        position: user.position,
       },
     })
   } catch (error) {

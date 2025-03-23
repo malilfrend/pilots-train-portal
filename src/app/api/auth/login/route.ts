@@ -31,7 +31,13 @@ export async function POST(request: Request) {
       user: {
         id: user.id,
         email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
         role: user.role,
+        university: user.university,
+        company: user.company,
+        experience: user.experience,
+        position: user.position,
       },
     })
 
