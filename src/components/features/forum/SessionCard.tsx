@@ -10,7 +10,7 @@ interface SessionCardProps {
   isInstructorMode?: boolean
 }
 
-export function SessionCard({ session, isInstructorMode = false }: SessionCardProps) {
+export function SessionCard({ session }: SessionCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   return (

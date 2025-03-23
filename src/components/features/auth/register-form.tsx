@@ -16,6 +16,8 @@ interface FormErrors {
   birthDate?: string
   university?: string
   company?: string
+  experience?: string
+  position?: string
   role?: string
   root?: string
 }
@@ -30,6 +32,8 @@ export function RegisterForm() {
     birthDate: '',
     university: '',
     company: '',
+    experience: '',
+    position: '',
     role: 'PILOT',
   })
   const [errors, setErrors] = useState<FormErrors>({})
@@ -169,6 +173,22 @@ export function RegisterForm() {
           value={formData.company}
           onChange={handleChange}
           error={errors.company}
+        />
+        <FormField
+          label="Должность"
+          name="position"
+          value={formData.position}
+          onChange={handleChange}
+          error={errors.position}
+          placeholder="Например: Второй пилот Boeing 737"
+        />
+        <FormField
+          label="Опыт"
+          name="experience"
+          value={formData.experience}
+          onChange={handleChange}
+          error={errors.experience}
+          placeholder="Например: 5 лет летного стажа, 3500 часов налета"
         />
         <select
           name="role"

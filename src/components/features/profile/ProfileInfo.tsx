@@ -41,6 +41,14 @@ export function ProfileInfo() {
           <p className="text-sm text-gray-500">Компания</p>
           <p className="font-medium">{user?.company || '—'}</p>
         </div>
+        <div>
+          <p className="text-sm text-gray-500">Должность</p>
+          <p className="font-medium">{user?.position || '—'}</p>
+        </div>
+        <div>
+          <p className="text-sm text-gray-500">Опыт</p>
+          <p className="font-medium">{user?.experience || '—'}</p>
+        </div>
       </div>
     </div>
   )

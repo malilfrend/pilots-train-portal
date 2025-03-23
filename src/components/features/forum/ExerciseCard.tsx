@@ -12,11 +12,7 @@ interface ExerciseCardProps {
   isInstructorMode?: boolean
 }
 
-export function ExerciseCard({
-  exercise,
-  onCommentAdded,
-  isInstructorMode = false,
-}: ExerciseCardProps) {
+export function ExerciseCard({ exercise, onCommentAdded }: ExerciseCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const { user } = useAuth()
 
