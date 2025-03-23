@@ -1,10 +1,12 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, AssessmentType, CompetencyCode } from '@prisma/client'
 import { hash } from 'bcrypt'
 
 const prisma = new PrismaClient()
 
 async function main() {
   // Очищаем существующие данные
+  await prisma.competencyScore.deleteMany()
+  await prisma.assessment.deleteMany()
   await prisma.comment.deleteMany()
   await prisma.exercise.deleteMany()
   await prisma.session.deleteMany()
@@ -13,7 +15,7 @@ async function main() {
   // Создаем тестового пользователя
   const hashedPassword = await hash('password123', 10)
   
-  await prisma.user.create({
+  const pilot = await prisma.user.create({
     data: {
       email: 'pilot@example.com',
       password: hashedPassword,
@@ -40,6 +42,99 @@ async function main() {
       company: 'Авиационный учебный центр',
       position: 'Старший инструктор',
       experience: '20 лет летного стажа, 12000 часов налета'
+    }
+  })
+
+  // Создаем оценки компетенций для пилота
+  // EVAL оценка
+  await prisma.assessment.create({
+    data: {
+      type: 'EVAL',
+      date: new Date('2024-03-15'),
+      userId: pilot.id,
+      instructorComment: 'Хорошее знание процедур, но нужно улучшить коммуникацию в критических ситуациях.',
+      competencyScores: {
+        create: [
+          { competencyCode: 'APK', score: 3 },
+          { competencyCode: 'COM', score: 4 },
+          { competencyCode: 'FPA', score: 3 },
+          { competencyCode: 'FPM', score: 3 },
+          { competencyCode: 'LTW', score: 4 },
+          { competencyCode: 'PSD', score: 3 },
+          { competencyCode: 'SAW', score: 4 },
+          { competencyCode: 'WLM', score: 3 },
+          { competencyCode: 'KNO', score: 4 }
+        ]
+      }
+    }
+  })
+
+  // QUALIFICATION оценка
+  await prisma.assessment.create({
+    data: {
+      type: 'QUALIFICATION',
+      date: new Date('2024-03-10'),
+      userId: pilot.id,
+      instructorComment: 'Квалификационная проверка пройдена успешно. Рекомендуется уделить внимание ситуационной осознанности.',
+      competencyScores: {
+        create: [
+          { competencyCode: 'APK', score: 4 },
+          { competencyCode: 'COM', score: 3 },
+          { competencyCode: 'FPA', score: 4 },
+          { competencyCode: 'FPM', score: 4 },
+          { competencyCode: 'LTW', score: 3 },
+          { competencyCode: 'PSD', score: 4 },
+          { competencyCode: 'SAW', score: 3 },
+          { competencyCode: 'WLM', score: 4 },
+          { competencyCode: 'KNO', score: 3 }
+        ]
+      }
+    }
+  })
+
+  // AVIATION_EVENT оценка
+  await prisma.assessment.create({
+    data: {
+      type: 'AVIATION_EVENT',
+      date: new Date('2024-02-20'),
+      userId: pilot.id,
+      instructorComment: 'Действия при авиационном событии были адекватными. Необходимо усилить контроль за выполнением стандартных операционных процедур.',
+      competencyScores: {
+        create: [
+          { competencyCode: 'APK', score: 3 },
+          { competencyCode: 'COM', score: 3 },
+          { competencyCode: 'FPA', score: 4 },
+          { competencyCode: 'FPM', score: 3 },
+          { competencyCode: 'LTW', score: 3 },
+          { competencyCode: 'PSD', score: 4 },
+          { competencyCode: 'SAW', score: 3 },
+          { competencyCode: 'WLM', score: 3 },
+          { competencyCode: 'KNO', score: 4 }
+        ]
+      }
+    }
+  })
+
+  // FLIGHT_DATA_ANALYSIS оценка
+  await prisma.assessment.create({
+    data: {
+      type: 'FLIGHT_DATA_ANALYSIS',
+      date: new Date('2024-01-15'),
+      userId: pilot.id,
+      instructorComment: 'Анализ полетных данных показывает хорошую технику пилотирования. Обратите внимание на точность выдерживания параметров при заходе на посадку.',
+      competencyScores: {
+        create: [
+          { competencyCode: 'APK', score: 4 },
+          { competencyCode: 'COM', score: 4 },
+          { competencyCode: 'FPA', score: 3 },
+          { competencyCode: 'FPM', score: 4 },
+          { competencyCode: 'LTW', score: 4 },
+          { competencyCode: 'PSD', score: 3 },
+          { competencyCode: 'SAW', score: 4 },
+          { competencyCode: 'WLM', score: 4 },
+          { competencyCode: 'KNO', score: 3 }
+        ]
+      }
     }
   })
 

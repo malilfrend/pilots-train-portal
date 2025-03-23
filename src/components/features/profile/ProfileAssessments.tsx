@@ -1,82 +1,8 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { AssessmentTable } from './AssessmentTable'
 import { Assessment, AssessmentType } from '@/types/assessment'
-
-const MOCK_ASSESSMENTS: Assessment[] = [
-  {
-    id: '1',
-    type: 'EVAL',
-    date: '2024-03-15',
-    competencyScores: [
-      { competencyCode: 'APK', score: 3 },
-      { competencyCode: 'COM', score: 4 },
-      { competencyCode: 'FPA', score: 3 },
-      { competencyCode: 'FPM', score: 3 },
-      { competencyCode: 'LTW', score: 4 },
-      { competencyCode: 'PSD', score: 3 },
-      { competencyCode: 'SAW', score: 4 },
-      { competencyCode: 'WLM', score: 3 },
-      { competencyCode: 'KNO', score: 4 },
-    ],
-    instructorComment:
-      'Хорошее знание процедур, но нужно улучшить коммуникацию в критических ситуациях.',
-  },
-  {
-    id: '2',
-    type: 'QUALIFICATION',
-    date: '2024-03-10',
-    competencyScores: [
-      { competencyCode: 'APK', score: 4 },
-      { competencyCode: 'COM', score: 3 },
-      { competencyCode: 'FPA', score: 4 },
-      { competencyCode: 'FPM', score: 4 },
-      { competencyCode: 'LTW', score: 3 },
-      { competencyCode: 'PSD', score: 4 },
-      { competencyCode: 'SAW', score: 3 },
-      { competencyCode: 'WLM', score: 4 },
-      { competencyCode: 'KNO', score: 3 },
-    ],
-    instructorComment:
-      'Квалификационная проверка пройдена успешно. Рекомендуется уделить внимание ситуационной осознанности.',
-  },
-  {
-    id: '3',
-    type: 'AVIATION_EVENT',
-    date: '2024-02-20',
-    competencyScores: [
-      { competencyCode: 'APK', score: 3 },
-      { competencyCode: 'COM', score: 3 },
-      { competencyCode: 'FPA', score: 4 },
-      { competencyCode: 'FPM', score: 3 },
-      { competencyCode: 'LTW', score: 3 },
-      { competencyCode: 'PSD', score: 4 },
-      { competencyCode: 'SAW', score: 3 },
-      { competencyCode: 'WLM', score: 3 },
-      { competencyCode: 'KNO', score: 4 },
-    ],
-    instructorComment:
-      'Действия при авиационном событии были адекватными. Необходимо усилить контроль за выполнением стандартных операционных процедур.',
-  },
-  {
-    id: '4',
-    type: 'FLIGHT_DATA_ANALYSIS',
-    date: '2024-01-15',
-    competencyScores: [
-      { competencyCode: 'APK', score: 4 },
-      { competencyCode: 'COM', score: 4 },
-      { competencyCode: 'FPA', score: 3 },
-      { competencyCode: 'FPM', score: 4 },
-      { competencyCode: 'LTW', score: 4 },
-      { competencyCode: 'PSD', score: 3 },
-      { competencyCode: 'SAW', score: 4 },
-      { competencyCode: 'WLM', score: 4 },
-      { competencyCode: 'KNO', score: 3 },
-    ],
-    instructorComment:
-      'Анализ полетных данных показывает хорошую технику пилотирования. Обратите внимание на точность выдерживания параметров при заходе на посадку.',
-  },
-]
 
 const assessmentTypeLabels: Record<AssessmentType, string> = {
   EVAL: 'Этап Оценки (EVAL)',
@@ -86,28 +12,60 @@ const assessmentTypeLabels: Record<AssessmentType, string> = {
 }
 
 export function ProfileAssessments() {
-  // Находим последнюю оценку для каждого типа
-  const evalAssessment = MOCK_ASSESSMENTS.find((a) => a.type === 'EVAL') || null
-  const qualificationAssessment = MOCK_ASSESSMENTS.find((a) => a.type === 'QUALIFICATION') || null
-  const aviationEventAssessment = MOCK_ASSESSMENTS.find((a) => a.type === 'AVIATION_EVENT') || null
-  const flightDataAssessment =
-    MOCK_ASSESSMENTS.find((a) => a.type === 'FLIGHT_DATA_ANALYSIS') || null
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [assessments, setAssessments] = useState<Record<AssessmentType, Assessment | null>>({
+    EVAL: null,
+    QUALIFICATION: null,
+    AVIATION_EVENT: null,
+    FLIGHT_DATA_ANALYSIS: null,
+  })
+  const [generalAssessment, setGeneralAssessment] = useState<Assessment | null>(null)
 
-  const generalAssessment: Assessment = {
-    id: 'general',
-    type: 'EVAL',
-    date: new Date().toISOString(),
-    competencyScores: [
-      { competencyCode: 'APK', score: 3 },
-      { competencyCode: 'COM', score: 3 },
-      { competencyCode: 'FPA', score: 4 },
-      { competencyCode: 'FPM', score: 3 },
-      { competencyCode: 'LTW', score: 4 },
-      { competencyCode: 'PSD', score: 3 },
-      { competencyCode: 'SAW', score: 3 },
-      { competencyCode: 'WLM', score: 4 },
-      { competencyCode: 'KNO', score: 3 },
-    ],
+  useEffect(() => {
+    async function fetchAssessments() {
+      try {
+        setLoading(true)
+        const response = await fetch('/api/assessments')
+
+        if (!response.ok) {
+          throw new Error('Не удалось загрузить данные')
+        }
+
+        const data = await response.json()
+        setAssessments(data.assessments)
+        setGeneralAssessment(data.generalAssessment)
+      } catch (err) {
+        console.error('Ошибка при загрузке оценок:', err)
+        setError('Не удалось загрузить данные оценок')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAssessments()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="space-y-8 mt-8">
+        <h2 className="text-2xl font-bold mb-6">Оценка компетенций пилота</h2>
+        <div className="text-center p-8">
+          <p>Загрузка данных...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-8 mt-8">
+        <h2 className="text-2xl font-bold mb-6">Оценка компетенций пилота</h2>
+        <div className="text-center p-8 text-red-500">
+          <p>{error}</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -115,7 +73,7 @@ export function ProfileAssessments() {
       <h2 className="text-2xl font-bold mb-6">Оценка компетенций пилота</h2>
 
       <div className="mb-12">
-        <AssessmentTable title={assessmentTypeLabels.EVAL} assessment={evalAssessment} />
+        <AssessmentTable title={assessmentTypeLabels.EVAL} assessment={assessments.EVAL} />
         <div className="mt-4 p-4 bg-gray-50 rounded-md">
           <p className="text-sm italic">
             Этап оценки (EVAL) — это формальная оценка компетенций пилота, проводимая после
@@ -127,7 +85,7 @@ export function ProfileAssessments() {
       <div className="mb-12">
         <AssessmentTable
           title={assessmentTypeLabels.QUALIFICATION}
-          assessment={qualificationAssessment}
+          assessment={assessments.QUALIFICATION}
         />
         <div className="mt-4 p-4 bg-gray-50 rounded-md">
           <p className="text-sm italic">
@@ -140,7 +98,7 @@ export function ProfileAssessments() {
       <div className="mb-12">
         <AssessmentTable
           title={assessmentTypeLabels.AVIATION_EVENT}
-          assessment={aviationEventAssessment}
+          assessment={assessments.AVIATION_EVENT}
         />
         <div className="mt-4 p-4 bg-gray-50 rounded-md">
           <p className="text-sm italic">
@@ -153,7 +111,7 @@ export function ProfileAssessments() {
       <div className="mb-12">
         <AssessmentTable
           title={assessmentTypeLabels.FLIGHT_DATA_ANALYSIS}
-          assessment={flightDataAssessment}
+          assessment={assessments.FLIGHT_DATA_ANALYSIS}
         />
         <div className="mt-4 p-4 bg-gray-50 rounded-md">
           <p className="text-sm italic">
