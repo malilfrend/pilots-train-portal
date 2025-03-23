@@ -50,6 +50,8 @@ export async function POST(request: Request) {
         role: user.role,
         university: user.university,
         company: user.company,
+        experience: user.experience,
+        position: user.position,
       },
     })
 

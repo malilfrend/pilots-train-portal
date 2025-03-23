@@ -8,6 +8,8 @@ export const registerSchema = z.object({
   birthDate: z.string().min(1, 'Дата рождения обязательна'),
   university: z.string().optional(),
   company: z.string().optional(),
+  experience: z.string().optional(),
+  position: z.string().optional(),
   role: z.enum(['PILOT', 'INSTRUCTOR']).default('PILOT'),
 })
 

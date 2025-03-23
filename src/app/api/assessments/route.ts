@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyToken } from '@/lib/auth'
 import prisma from '@/lib/prisma'
-import { AssessmentType } from '@prisma/client'
+import { AssessmentType, ASSESSMENT_TYPES } from '@/types/assessment'
 
 export async function GET() {
   try {
@@ -34,7 +34,7 @@ export async function GET() {
     // Преобразуем данные для фронтенда
     const formattedAssessments = assessments.map((assessment) => ({
       id: assessment.id.toString(),
-      type: assessment.type,
+      type: assessment.type as AssessmentType,
       date: assessment.date.toISOString(),
       instructorComment: assessment.instructorComment,
       competencyScores: assessment.competencyScores.map((score) => ({
@@ -44,7 +44,7 @@ export async function GET() {
     }))
 
     // Группируем оценки по типу и берем последнюю для каждого типа
-    const assessmentsByType = Object.values(AssessmentType).reduce(
+    const assessmentsByType = ASSESSMENT_TYPES.reduce(
       (acc, type) => {
         const typeAssessments = formattedAssessments.filter((a) => a.type === type)
         if (typeAssessments.length > 0) {

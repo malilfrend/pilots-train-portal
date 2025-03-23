@@ -14,6 +14,13 @@ export type CompetencyScore = {
 
 export type AssessmentType = 'EVAL' | 'QUALIFICATION' | 'AVIATION_EVENT' | 'FLIGHT_DATA_ANALYSIS'
 
+export const ASSESSMENT_TYPES: AssessmentType[] = [
+  'EVAL',
+  'QUALIFICATION',
+  'AVIATION_EVENT',
+  'FLIGHT_DATA_ANALYSIS',
+]
+
 export type Assessment = {
   id: string
   type: AssessmentType
