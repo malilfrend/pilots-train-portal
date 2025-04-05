@@ -12,6 +12,9 @@ interface User {
   company?: string
   experience?: string
   position?: string
+  profileId?: number
+  pilotId?: number
+  instructorId?: number
 }
 
 interface AuthContextType {

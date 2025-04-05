@@ -4,11 +4,22 @@ import { hash } from 'bcrypt'
 const prisma = new PrismaClient()
 
 async function main() {
+  console.log('Очистка существующих данных...')
+  
+  // Сначала удаляем данные из зависимых таблиц
+  await prisma.competencyScore.deleteMany({})
+  await prisma.assessment.deleteMany({})
+  await prisma.instructor.deleteMany({})
+  await prisma.pilot.deleteMany({})
+  await prisma.userProfile.deleteMany({})
+  
+  console.log('Данные очищены. Начинаем заполнение...')
+
   // Хешируем пароль 
   const hashedPassword = await hash('password123', 10)
   
-  // Создаем первого пользователя
-  const vertoletov = await prisma.user.create({
+  // Создаем профиль первого пользователя (пилот)
+  const vertoletovProfile = await prisma.userProfile.create({
     data: {
       email: 'vertoletov@example.com',
       password: hashedPassword,
@@ -23,8 +34,8 @@ async function main() {
     }
   })
   
-  // Создаем второго пользователя
-  const poletaev = await prisma.user.create({
+  // Создаем профиль второго пользователя (пилот)
+  const poletaevProfile = await prisma.userProfile.create({
     data: {
       email: 'poletaev@example.com',
       password: hashedPassword,
@@ -39,19 +50,57 @@ async function main() {
     }
   })
 
+  // Создаем профиль третьего пользователя (инструктор)
+  const mentorProfile = await prisma.userProfile.create({
+    data: {
+      email: 'mentor@example.com',
+      password: hashedPassword,
+      firstName: 'Иван',
+      lastName: 'Инструкторов',
+      birthDate: new Date('1975-08-22'),
+      role: 'INSTRUCTOR',
+      university: 'СПбГУ ГА',
+      company: 'Авиационный учебный центр',
+      position: 'Старший инструктор',
+      experience: '25 лет летного стажа, 15000 часов налета'
+    }
+  })
+
+  // Создаем запись пилота для Вертолётова
+  const vertoletovPilot = await prisma.pilot.create({
+    data: {
+      profileId: vertoletovProfile.id
+    }
+  })
+
+  // Создаем запись пилота для Полетаева
+  const poletaevPilot = await prisma.pilot.create({
+    data: {
+      profileId: poletaevProfile.id
+    }
+  })
+
+  // Создаем запись инструктора
+  const mentor = await prisma.instructor.create({
+    data: {
+      profileId: mentorProfile.id
+    }
+  })
+
   // Создаем оценки для Вертолётова
   await prisma.assessment.create({
     data: {
       type: 'EVAL',
       date: new Date('2024-03-05'),
-      userId: vertoletov.id,
-      instructorComment: 'Отличное владение вертолетом и знание процедур. Рекомендуется к повышению.',
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      instructorComment: "FPM - Контролировать пилотирование, не допускать крен при выполнении маневра по команде TAWS. Учитывать боковой ветер при заходе на посадку в условиях ограниченной видимости (доворот на полосу при переходе на визуальное пилотирование). APK - Повторить правила применения EMERGENCY EVACUATION CHECKLIST. KNO - Повторить порядок расчета PERFOMANCE в аварийных и сложных ситуациях.",
       competencyScores: {
         create: [
-          { competencyCode: 'APK', score: 5 },
-          { competencyCode: 'COM', score: 4 },
+          { competencyCode: 'APK', score: 3 },
+          { competencyCode: 'COM', score: 5 },
           { competencyCode: 'FPA', score: 5 },
-          { competencyCode: 'FPM', score: 5 },
+          { competencyCode: 'FPM', score: 3 },
           { competencyCode: 'LTW', score: 4 },
           { competencyCode: 'PSD', score: 5 },
           { competencyCode: 'SAW', score: 4 },
@@ -66,7 +115,8 @@ async function main() {
     data: {
       type: 'QUALIFICATION',
       date: new Date('2024-02-10'),
-      userId: vertoletov.id,
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
       instructorComment: 'Квалификационная проверка пройдена на отлично. Показал высокий уровень профессионализма.',
       competencyScores: {
         create: [
@@ -89,7 +139,8 @@ async function main() {
     data: {
       type: 'EVAL',
       date: new Date('2024-03-12'),
-      userId: poletaev.id,
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
       instructorComment: 'Хорошее знание процедур, нужно улучшить коммуникацию в критических ситуациях.',
       competencyScores: {
         create: [
@@ -111,7 +162,8 @@ async function main() {
     data: {
       type: 'AVIATION_EVENT',
       date: new Date('2024-01-25'),
-      userId: poletaev.id,
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
       instructorComment: 'Действия при авиационном событии были адекватными. Необходимо усилить контроль за выполнением SOP.',
       competencyScores: {
         create: [
@@ -129,7 +181,7 @@ async function main() {
     }
   })
 
-  console.log('База данных production успешно заполнена тестовыми пользователями и оценками')
+  console.log('База данных успешно заполнена тестовыми пользователями и оценками')
 }
 
 main()

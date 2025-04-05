@@ -33,7 +33,8 @@ enum CompetencyCode {
   KNO
 }
 
-model User {
+// Базовый профиль пользователя
+model UserProfile {
   id            Int           @id @default(autoincrement())
   email         String        @unique
   password      String
@@ -42,21 +43,47 @@ model User {
   birthDate     DateTime
   university    String?
   company       String?
+  role          UserRole
   experience    String?       // Опыт работы
   position      String?       // Должность
-  role          UserRole      @default(PILOT)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
-  comments      Comment[]
-  assessments   Assessment[]  // Оценки пользователя
+
+  // Связи с конкретными ролями
+  pilot         Pilot?
+  instructor    Instructor?
+  superAdmin    Boolean       @default(false)
+}
+
+// Модель пилота
+model Pilot {
+  id            Int           @id @default(autoincrement())
+  profile       UserProfile   @relation(fields: [profileId], references: [id])
+  profileId     Int           @unique  // Один профиль - один пилот
+  
+  assessments   Assessment[]  // Оценки пилота
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+// Модель инструктора
+model Instructor {
+  id                  Int           @id @default(autoincrement())
+  profile             UserProfile   @relation(fields: [profileId], references: [id])
+  profileId           Int           @unique  // Один профиль - один инструктор
+  createdAssessments  Assessment[]  // Оценки, созданные инструктором
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 }
 
 model Assessment {
   id                Int                 @id @default(autoincrement())
   type              AssessmentType
   date              DateTime
-  user              User                @relation(fields: [userId], references: [id])
-  userId            Int
+  pilot             Pilot               @relation(fields: [pilotId], references: [id])
+  pilotId           Int
+  instructor        Instructor          @relation(fields: [instructorId], references: [id])
+  instructorId      Int
   instructorComment String?
   competencyScores  CompetencyScore[]
   createdAt         DateTime            @default(now())
@@ -71,36 +98,4 @@ model CompetencyScore {
   assessmentId   Int
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
-}
-
-model Session {
-  id          Int       @id @default(autoincrement())
-  number      Int       // Номер сессии (1-6)
-  title       String    // Название сессии
-  description String    // Описание сессии
-  exercises   Exercise[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model Exercise {
-  id          Int       @id @default(autoincrement())
-  title       String    // Название упражнения
-  description String    // Описание упражнения
-  session     Session   @relation(fields: [sessionId], references: [id])
-  sessionId   Int
-  comments    Comment[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model Comment {
-  id         Int      @id @default(autoincrement())
-  content    String
-  exercise   Exercise @relation(fields: [exerciseId], references: [id])
-  exerciseId Int
-  author     User     @relation(fields: [authorId], references: [id])
-  authorId   Int
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
 }

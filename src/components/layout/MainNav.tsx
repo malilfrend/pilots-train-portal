@@ -15,19 +15,14 @@ export function MainNav() {
       label: 'Профиль',
       active: pathname === '/profile',
     },
-    {
-      href: '/forum',
-      label: 'Форум',
-      active: pathname === '/forum',
-    },
   ]
 
   // Дополнительные маршруты для инструкторов
-  if (user?.role === 'INSTRUCTOR' || user?.role === 'SUPER_ADMIN') {
+  if (user?.role === 'INSTRUCTOR') {
     routes.push({
-      href: '/instructor',
-      label: 'Инструкторский раздел',
-      active: pathname.startsWith('/instructor'),
+      href: '/assessments',
+      label: 'Оценки',
+      active: pathname.startsWith('/assessments'),
     })
   }
 

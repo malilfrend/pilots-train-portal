@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { AssessmentTable } from './AssessmentTable'
 import { Assessment, AssessmentType } from '@/types/assessment'
+import { useAuth } from '@/contexts/auth-context'
 
 const assessmentTypeLabels: Record<AssessmentType, string> = {
   EVAL: 'Этап Оценки (EVAL)',
@@ -12,6 +13,7 @@ const assessmentTypeLabels: Record<AssessmentType, string> = {
 }
 
 export function ProfileAssessments() {
+  const { user } = useAuth()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [assessments, setAssessments] = useState<Record<AssessmentType, Assessment | null>>({
@@ -23,6 +25,12 @@ export function ProfileAssessments() {
   const [generalAssessment, setGeneralAssessment] = useState<Assessment | null>(null)
 
   useEffect(() => {
+    // Если пользователь - инструктор, не делаем запрос на получение оценок
+    if (user?.role === 'INSTRUCTOR') {
+      setLoading(false)
+      return
+    }
+
     async function fetchAssessments() {
       try {
         setLoading(true)
@@ -44,7 +52,23 @@ export function ProfileAssessments() {
     }
 
     fetchAssessments()
-  }, [])
+  }, [user])
+
+  // Если пользователь - инструктор, показываем соответствующее сообщение
+  if (user?.role === 'INSTRUCTOR') {
+    return (
+      <div className="space-y-8 mt-8">
+        <h2 className="text-2xl font-bold mb-6">Оценка компетенций</h2>
+        <div className="text-center p-8 bg-blue-50 rounded-lg">
+          <p>Данный раздел доступен только для пилотов.</p>
+          <p className="mt-2">
+            Как инструктор, вы можете создавать и просматривать оценки пилотов в разделе
+            &apos;Оценки&apos;.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
