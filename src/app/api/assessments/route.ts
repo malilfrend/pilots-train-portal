@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyToken } from '@/lib/auth'
-import { ASSESSMENT_TYPES } from '@/types/assessment'
+import { ASSESSMENT_TYPES, CompetencyCode } from '@/types/assessment'
 import {
   getPilotByProfileId,
   getPilotAssessments,
@@ -53,11 +53,21 @@ export async function GET() {
     const assessmentsByType = groupAssessmentsByType(formattedAssessments, ASSESSMENT_TYPES)
 
     // Вычисляем средние значения для общей таблицы компетенций
-    const allScores: any[] = assessments.flatMap((a: any) => a.competencyScores)
+    const allCompetencyScores: any[] = assessments.flatMap((a: any) => a.competencyScores)
 
-    const competencyCodes = ['APK', 'COM', 'FPA', 'FPM', 'LTW', 'PSD', 'SAW', 'WLM', 'KNO']
+    const competencyCodes: CompetencyCode[] = [
+      'KNO',
+      'PRO',
+      'FPA',
+      'FPM',
+      'COM',
+      'LDR',
+      'WSA',
+      'WLM',
+      'PSD',
+    ]
     const generalScores = competencyCodes.map((code) => {
-      const scores = allScores.filter((s) => s.competencyCode === code)
+      const scores = allCompetencyScores.filter((s) => s.competencyCode === code)
       const avgScore =
         scores.length > 0
           ? Math.round(scores.reduce((sum, s) => sum + s.score, 0) / scores.length)
