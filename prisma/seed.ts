@@ -181,6 +181,30 @@ async function main() {
     data: {
       pilotId: vertoletovPilot.id,
       instructorId: mentor.id,
+      competencyCode: CompetencyCode.PRO,
+      sourceType: 'KP',
+      score: 4,
+      date: new Date('2024-02-10'),
+      comment: 'Хорошее следование процедурам при квалификационной проверке'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.FPA,
+      sourceType: 'KP',
+      score: 5,
+      date: new Date('2024-02-10'),
+      comment: 'Отличное использование автоматики'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
       competencyCode: CompetencyCode.FPM,
       sourceType: 'KP',
       score: 4,
@@ -189,7 +213,224 @@ async function main() {
     }
   })
 
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.COM,
+      sourceType: 'KP',
+      score: 4,
+      date: new Date('2024-02-10'),
+      comment: 'Хорошие коммуникативные навыки при проверке'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.LDR,
+      sourceType: 'KP',
+      score: 3,
+      date: new Date('2024-02-10'),
+      comment: 'Удовлетворительные лидерские качества'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.WSA,
+      sourceType: 'KP',
+      score: 5,
+      date: new Date('2024-02-10'),
+      comment: 'Отличная ситуационная осведомленность'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.WLM,
+      sourceType: 'KP',
+      score: 4,
+      date: new Date('2024-02-10'),
+      comment: 'Хорошее распределение рабочей нагрузки'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.PSD,
+      sourceType: 'KP',
+      score: 4,
+      date: new Date('2024-02-10'),
+      comment: 'Хорошие навыки принятия решений при проверке'
+    }
+  })
+
+  // Создаем оценки для Вертолётова (PADP - Программа анализа данных полета)
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.KNO,
+      sourceType: 'PADP',
+      score: 4,
+      date: new Date('2024-01-15'),
+      comment: 'Хорошее применение знаний по результатам анализа полета'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.PRO,
+      sourceType: 'PADP',
+      score: 3,
+      date: new Date('2024-01-15'),
+      comment: 'Удовлетворительное соблюдение процедур по данным анализа'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.FPA,
+      sourceType: 'PADP',
+      score: 5,
+      date: new Date('2024-01-15'),
+      comment: 'Отличное управление автоматикой по данным полета'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.FPM,
+      sourceType: 'PADP',
+      score: 3,
+      date: new Date('2024-01-15'),
+      comment: 'Удовлетворительное ручное управление по данным полета'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.COM,
+      sourceType: 'PADP',
+      score: 2,
+      date: new Date('2024-01-15'),
+      comment: 'Недостаточная коммуникация по данным записей полета'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.LDR,
+      sourceType: 'PADP',
+      score: 3,
+      date: new Date('2024-01-15'),
+      comment: 'Удовлетворительные лидерские качества по данным анализа'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.WSA,
+      sourceType: 'PADP',
+      score: 4,
+      date: new Date('2024-01-15'),
+      comment: 'Хорошая ситуационная осведомленность по данным полета'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.WLM,
+      sourceType: 'PADP',
+      score: 4,
+      date: new Date('2024-01-15'),
+      comment: 'Хорошее управление нагрузкой по данным полета'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.PSD,
+      sourceType: 'PADP',
+      score: 3,
+      date: new Date('2024-01-15'),
+      comment: 'Удовлетворительные решения по данным анализа'
+    }
+  })
+
   // Создаем оценки для Вертолётова (EVAL - Оценка)
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.KNO,
+      sourceType: 'EVAL',
+      score: 4,
+      date: new Date('2024-03-05'),
+      comment: 'Хорошее применение знаний в стандартных ситуациях'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.PRO,
+      sourceType: 'EVAL',
+      score: 5,
+      date: new Date('2024-03-05'),
+      comment: 'Отличное следование процедурам'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.FPA,
+      sourceType: 'EVAL',
+      score: 4,
+      date: new Date('2024-03-05'),
+      comment: 'Хорошее использование автоматических систем'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.FPM,
+      sourceType: 'EVAL',
+      score: 3,
+      date: new Date('2024-03-05'),
+      comment: 'Удовлетворительное ручное пилотирование'
+    }
+  })
+
   await prisma.pilotCompetencyScore.create({
     data: {
       pilotId: vertoletovPilot.id,
@@ -206,11 +447,374 @@ async function main() {
     data: {
       pilotId: vertoletovPilot.id,
       instructorId: mentor.id,
+      competencyCode: CompetencyCode.LDR,
+      sourceType: 'EVAL',
+      score: 4,
+      date: new Date('2024-03-05'),
+      comment: 'Хорошие лидерские качества'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.WSA,
+      sourceType: 'EVAL',
+      score: 3,
+      date: new Date('2024-03-05'),
+      comment: 'Удовлетворительная ситуационная осведомленность'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.WLM,
+      sourceType: 'EVAL',
+      score: 4,
+      date: new Date('2024-03-05'),
+      comment: 'Хорошее управление рабочей нагрузкой'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
       competencyCode: CompetencyCode.PSD,
       sourceType: 'EVAL',
       score: 4,
       date: new Date('2024-03-05'),
       comment: 'Хорошие навыки решения проблем и принятия решений'
+    }
+  })
+
+  // Создаем оценки для Вертолётова (AS - Авиационное событие)
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.KNO,
+      sourceType: 'AS',
+      score: 3,
+      date: new Date('2024-01-25'),
+      comment: 'Удовлетворительное применение знаний в нештатной ситуации'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.PRO,
+      sourceType: 'AS',
+      score: 4,
+      date: new Date('2024-01-25'),
+      comment: 'Хорошее следование процедурам в нештатной ситуации'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.FPA,
+      sourceType: 'AS',
+      score: 3,
+      date: new Date('2024-01-25'),
+      comment: 'Удовлетворительное использование автоматики в нештатной ситуации'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.FPM,
+      sourceType: 'AS',
+      score: 5,
+      date: new Date('2024-01-25'),
+      comment: 'Отличное ручное пилотирование в сложной ситуации'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.COM,
+      sourceType: 'AS',
+      score: 4,
+      date: new Date('2024-01-25'),
+      comment: 'Хорошая коммуникация в критической ситуации'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.LDR,
+      sourceType: 'AS',
+      score: 3,
+      date: new Date('2024-01-25'),
+      comment: 'Удовлетворительные лидерские качества в нештатной ситуации'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.WSA,
+      sourceType: 'AS',
+      score: 2,
+      date: new Date('2024-01-25'),
+      comment: 'Недостаточная ситуационная осведомленность в критической ситуации'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.WLM,
+      sourceType: 'AS',
+      score: 3,
+      date: new Date('2024-01-25'),
+      comment: 'Удовлетворительное управление нагрузкой в нештатной ситуации'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: vertoletovPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.PSD,
+      sourceType: 'AS',
+      score: 4,
+      date: new Date('2024-01-25'),
+      comment: 'Хорошие решения в нештатной ситуации'
+    }
+  })
+
+  // Создаем оценки для Полетаева (KP - Квалификационная проверка)
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.KNO,
+      sourceType: 'KP',
+      score: 4,
+      date: new Date('2024-01-31'),
+      comment: 'Хорошие теоретические знания при проверке'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.PRO,
+      sourceType: 'KP',
+      score: 3,
+      date: new Date('2024-01-31'),
+      comment: 'Удовлетворительное соблюдение процедур'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.FPA,
+      sourceType: 'KP',
+      score: 4,
+      date: new Date('2024-01-31'),
+      comment: 'Хорошее использование автоматики'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.FPM,
+      sourceType: 'KP',
+      score: 3,
+      date: new Date('2024-01-31'),
+      comment: 'Удовлетворительное ручное пилотирование'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.COM,
+      sourceType: 'KP',
+      score: 3,
+      date: new Date('2024-01-31'),
+      comment: 'Удовлетворительные коммуникативные навыки'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.LDR,
+      sourceType: 'KP',
+      score: 3,
+      date: new Date('2024-01-31'),
+      comment: 'Удовлетворительные лидерские качества'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.WSA,
+      sourceType: 'KP',
+      score: 4,
+      date: new Date('2024-01-31'),
+      comment: 'Хорошая ситуационная осведомленность'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.WLM,
+      sourceType: 'KP',
+      score: 3,
+      date: new Date('2024-01-31'),
+      comment: 'Удовлетворительное управление нагрузкой'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.PSD,
+      sourceType: 'KP',
+      score: 3,
+      date: new Date('2024-01-31'),
+      comment: 'Удовлетворительные навыки принятия решений'
+    }
+  })
+
+  // Создаем оценки для Полетаева (PADP - Программа анализа данных полета)
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.KNO,
+      sourceType: 'PADP',
+      score: 3,
+      date: new Date('2024-01-10'),
+      comment: 'Удовлетворительное применение знаний по данным полета'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.PRO,
+      sourceType: 'PADP',
+      score: 4,
+      date: new Date('2024-01-10'),
+      comment: 'Хорошее соблюдение процедур по данным анализа'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.FPA,
+      sourceType: 'PADP',
+      score: 4,
+      date: new Date('2024-01-10'),
+      comment: 'Хорошее использование автоматики по данным полета'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.FPM,
+      sourceType: 'PADP',
+      score: 2,
+      date: new Date('2024-01-10'),
+      comment: 'Требуется улучшение навыков ручного пилотирования'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.COM,
+      sourceType: 'PADP',
+      score: 3,
+      date: new Date('2024-01-10'),
+      comment: 'Удовлетворительная коммуникация по данным полета'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.LDR,
+      sourceType: 'PADP',
+      score: 2,
+      date: new Date('2024-01-10'),
+      comment: 'Недостаточные лидерские качества по данным анализа'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.WSA,
+      sourceType: 'PADP',
+      score: 3,
+      date: new Date('2024-01-10'),
+      comment: 'Удовлетворительная ситуационная осведомленность'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.WLM,
+      sourceType: 'PADP',
+      score: 3,
+      date: new Date('2024-01-10'),
+      comment: 'Удовлетворительное управление нагрузкой'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.PSD,
+      sourceType: 'PADP',
+      score: 3,
+      date: new Date('2024-01-10'),
+      comment: 'Удовлетворительные навыки принятия решений'
     }
   })
 
@@ -231,6 +835,42 @@ async function main() {
     data: {
       pilotId: poletaevPilot.id,
       instructorId: mentor.id,
+      competencyCode: CompetencyCode.PRO,
+      sourceType: 'EVAL',
+      score: 4,
+      date: new Date('2024-03-12'),
+      comment: 'Хорошее следование процедурам'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.FPA,
+      sourceType: 'EVAL',
+      score: 3,
+      date: new Date('2024-03-12'),
+      comment: 'Удовлетворительное использование автоматики'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.FPM,
+      sourceType: 'EVAL',
+      score: 3,
+      date: new Date('2024-03-12'),
+      comment: 'Удовлетворительное ручное пилотирование'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
       competencyCode: CompetencyCode.COM,
       sourceType: 'EVAL',
       score: 3,
@@ -239,16 +879,136 @@ async function main() {
     }
   })
 
-  // Создаем оценки для Полетаева (AS - Авиационное событие)
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.LDR,
+      sourceType: 'EVAL',
+      score: 3,
+      date: new Date('2024-03-12'),
+      comment: 'Удовлетворительные лидерские качества'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.WSA,
+      sourceType: 'EVAL',
+      score: 4,
+      date: new Date('2024-03-12'),
+      comment: 'Хорошая ситуационная осведомленность'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.WLM,
+      sourceType: 'EVAL',
+      score: 4,
+      date: new Date('2024-03-12'),
+      comment: 'Хорошее управление рабочей нагрузкой'
+    }
+  })
+
   await prisma.pilotCompetencyScore.create({
     data: {
       pilotId: poletaevPilot.id,
       instructorId: mentor.id,
       competencyCode: CompetencyCode.PSD,
+      sourceType: 'EVAL',
+      score: 3,
+      date: new Date('2024-03-12'),
+      comment: 'Удовлетворительные навыки решения проблем'
+    }
+  })
+
+  // Создаем оценки для Полетаева (AS - Авиационное событие)
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.KNO,
+      sourceType: 'AS',
+      score: 3,
+      date: new Date('2024-01-25'),
+      comment: 'Удовлетворительное применение знаний в нештатной ситуации'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.PRO,
+      sourceType: 'AS',
+      score: 3,
+      date: new Date('2024-01-25'),
+      comment: 'Удовлетворительное следование процедурам в критической ситуации'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.FPA,
+      sourceType: 'AS',
+      score: 2,
+      date: new Date('2024-01-25'),
+      comment: 'Необходимо улучшить использование автоматики в нештатных ситуациях'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.FPM,
       sourceType: 'AS',
       score: 4,
       date: new Date('2024-01-25'),
-      comment: 'Хорошие решения во время авиационного события'
+      comment: 'Хорошее ручное пилотирование в нештатной ситуации'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.COM,
+      sourceType: 'AS',
+      score: 2,
+      date: new Date('2024-01-25'),
+      comment: 'Недостаточная коммуникация в критической ситуации'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.LDR,
+      sourceType: 'AS',
+      score: 3,
+      date: new Date('2024-01-25'),
+      comment: 'Удовлетворительные лидерские качества в критической ситуации'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.WSA,
+      sourceType: 'AS',
+      score: 3,
+      date: new Date('2024-01-25'),
+      comment: 'Удовлетворительная ситуационная осведомленность в критической ситуации'
     }
   })
 
@@ -261,6 +1021,18 @@ async function main() {
       score: 3,
       date: new Date('2024-01-25'),
       comment: 'Требуется улучшение управления рабочей нагрузкой в стрессовых ситуациях'
+    }
+  })
+
+  await prisma.pilotCompetencyScore.create({
+    data: {
+      pilotId: poletaevPilot.id,
+      instructorId: mentor.id,
+      competencyCode: CompetencyCode.PSD,
+      sourceType: 'AS',
+      score: 4,
+      date: new Date('2024-01-25'),
+      comment: 'Хорошие решения во время авиационного события'
     }
   })
 
