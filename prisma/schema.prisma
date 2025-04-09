@@ -14,26 +14,28 @@ enum UserRole {
   SUPER_ADMIN
 }
 
-enum AssessmentType {
-  EVAL
-  QUALIFICATION
-  AVIATION_EVENT
-  FLIGHT_DATA_ANALYSIS
+// Типы оценки (источники оценки)
+enum AssessmentSourceType {
+  KP            // Квалификационная проверка
+  PADP          // Программа анализа данных полета
+  EVAL          // Оценка
+  AS            // Авиационное событие
 }
 
 enum CompetencyCode {
-  APK
-  COM
-  FPA
-  FPM
-  LTW
-  PSD
-  SAW
-  WLM
-  KNO
+  KNO           // Knowledge
+  PRO           // Procedures
+  FPA           // Flight Path Automation
+  FPM           // Flight Path Manual
+  COM           // Communication
+  LDR           // Leadership
+  WSA           // Workload and Situation Awareness
+  WLM           // Workload Management
+  PSD           // Problem Solving and Decision
 }
 
-model User {
+// Базовый профиль пользователя
+model UserProfile {
   id            Int           @id @default(autoincrement())
   email         String        @unique
   password      String
@@ -42,65 +44,65 @@ model User {
   birthDate     DateTime
   university    String?
   company       String?
+  role          UserRole
   experience    String?       // Опыт работы
   position      String?       // Должность
-  role          UserRole      @default(PILOT)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
-  comments      Comment[]
-  assessments   Assessment[]  // Оценки пользователя
+
+  // Связи с конкретными ролями
+  pilot         Pilot?
+  instructor    Instructor?
+  superAdmin    Boolean       @default(false)
 }
 
-model Assessment {
-  id                Int                 @id @default(autoincrement())
-  type              AssessmentType
-  date              DateTime
-  user              User                @relation(fields: [userId], references: [id])
-  userId            Int
-  instructorComment String?
-  competencyScores  CompetencyScore[]
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+// Модель пилота
+model Pilot {
+  id              Int                @id @default(autoincrement())
+  profile         UserProfile        @relation(fields: [profileId], references: [id])
+  profileId       Int                @unique  // Один профиль - один пилот
+  
+  competencyScores PilotCompetencyScore[] // Оценки пилота по компетенциям
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 }
 
-model CompetencyScore {
-  id             Int           @id @default(autoincrement())
-  competencyCode CompetencyCode
-  score          Int
-  assessment     Assessment    @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-  assessmentId   Int
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+// Модель инструктора
+model Instructor {
+  id                  Int                @id @default(autoincrement())
+  profile             UserProfile        @relation(fields: [profileId], references: [id])
+  profileId           Int                @unique  // Один профиль - один инструктор
+  createdScores       PilotCompetencyScore[] // Оценки, созданные инструктором
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 }
 
-model Session {
-  id          Int       @id @default(autoincrement())
-  number      Int       // Номер сессии (1-6)
-  title       String    // Название сессии
-  description String    // Описание сессии
-  exercises   Exercise[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+// Веса компетенций для разных источников
+model CompetencyWeight {
+  id              Int               @id @default(autoincrement())
+  competencyCode  CompetencyCode    // Код компетенции (KNO, PRO, и т.д.)
+  sourceType      AssessmentSourceType // Тип источника (KP, PADP, EVAL, AS)
+  weight          Float             // Вес источника для данной компетенции (0.35, 0.1, и т.д.)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@unique([competencyCode, sourceType]) // Уникальное сочетание компетенции и источника
 }
 
-model Exercise {
-  id          Int       @id @default(autoincrement())
-  title       String    // Название упражнения
-  description String    // Описание упражнения
-  session     Session   @relation(fields: [sessionId], references: [id])
-  sessionId   Int
-  comments    Comment[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
+// Оценки пилота по компетенциям от разных источников
+model PilotCompetencyScore {
+  id              Int                 @id @default(autoincrement())
+  pilot           Pilot               @relation(fields: [pilotId], references: [id])
+  pilotId         Int
+  instructor      Instructor          @relation(fields: [instructorId], references: [id])
+  instructorId    Int
+  competencyCode  CompetencyCode      // Код компетенции
+  sourceType      AssessmentSourceType // Тип источника оценки
+  score           Int                 // Оценка по шкале (2-5)
+  date            DateTime            // Дата выставления оценки
+  comment         String?             // Комментарий инструктора
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
 
-model Comment {
-  id         Int      @id @default(autoincrement())
-  content    String
-  exercise   Exercise @relation(fields: [exerciseId], references: [id])
-  exerciseId Int
-  author     User     @relation(fields: [authorId], references: [id])
-  authorId   Int
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  @@unique([pilotId, competencyCode, sourceType]) // Уникальное сочетание пилота, компетенции и источника
 }

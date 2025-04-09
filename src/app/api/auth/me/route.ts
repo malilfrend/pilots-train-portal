@@ -17,25 +17,32 @@ export async function GET() {
       return NextResponse.json({ error: 'Недействительный токен' }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
+    const userProfile = await prisma.userProfile.findUnique({
       where: { id: payload.id as number },
+      include: {
+        pilot: true,
+        instructor: true,
+      },
     })
 
-    if (!user) {
+    if (!userProfile) {
       return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 })
     }
 
     return NextResponse.json({
       user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        university: user.university,
-        company: user.company,
-        experience: user.experience,
-        position: user.position,
+        id: userProfile.id,
+        email: userProfile.email,
+        firstName: userProfile.firstName,
+        lastName: userProfile.lastName,
+        role: userProfile.role,
+        university: userProfile.university,
+        company: userProfile.company,
+        experience: userProfile.experience,
+        position: userProfile.position,
+        profileId: userProfile.id,
+        pilotId: userProfile.pilot?.id,
+        instructorId: userProfile.instructor?.id,
       },
     })
   } catch (error) {

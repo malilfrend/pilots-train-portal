@@ -9,7 +9,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         <BackButton />
       </div>
       <Header />
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 justify-center">{children}</main>
       <Footer />
     </div>
   )

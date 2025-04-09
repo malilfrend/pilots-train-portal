@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyToken } from '@/lib/auth'
-import prisma from '@/lib/prisma'
-import { AssessmentType, ASSESSMENT_TYPES } from '@/types/assessment'
+import { ASSESSMENT_TYPES, CompetencyCode } from '@/types/assessment'
+import {
+  getPilotByProfileId,
+  getPilotAssessments,
+  formatAssessments,
+  groupAssessmentsByType,
+} from '@/lib/assessments'
 
 export async function GET() {
   try {
@@ -18,49 +23,51 @@ export async function GET() {
       return NextResponse.json({ error: 'Недействительный токен' }, { status: 401 })
     }
 
-    const userId = payload.id as number
+    const userProfileId = payload.id as number
+    const roleType = payload.roleType as string
 
-    // Получаем все оценки пользователя с компетенциями
-    const assessments = await prisma.assessment.findMany({
-      where: { userId },
-      include: {
-        competencyScores: true,
-      },
-      orderBy: {
-        date: 'desc',
-      },
-    })
+    // Если пользователь - инструктор, возвращаем ошибку
+    if (roleType === 'INSTRUCTOR') {
+      return NextResponse.json(
+        {
+          error: 'Инструкторы не имеют оценок компетенций',
+        },
+        { status: 403 }
+      )
+    }
+
+    // Находим пилота по профилю пользователя
+    const pilot = await getPilotByProfileId(userProfileId)
+
+    if (!pilot) {
+      return NextResponse.json({ error: 'Пилот не найден' }, { status: 404 })
+    }
+
+    // Получаем все оценки пилота с компетенциями
+    const assessments = await getPilotAssessments(pilot.id)
 
     // Преобразуем данные для фронтенда
-    const formattedAssessments = assessments.map((assessment) => ({
-      id: assessment.id.toString(),
-      type: assessment.type as AssessmentType,
-      date: assessment.date.toISOString(),
-      instructorComment: assessment.instructorComment,
-      competencyScores: assessment.competencyScores.map((score) => ({
-        competencyCode: score.competencyCode,
-        score: score.score,
-      })),
-    }))
+    const formattedAssessments = formatAssessments(assessments)
 
     // Группируем оценки по типу и берем последнюю для каждого типа
-    const assessmentsByType = ASSESSMENT_TYPES.reduce(
-      (acc, type) => {
-        const typeAssessments = formattedAssessments.filter((a) => a.type === type)
-        if (typeAssessments.length > 0) {
-          acc[type] = typeAssessments[0] // Берем самую свежую оценку
-        }
-        return acc
-      },
-      {} as Record<AssessmentType, any>
-    )
+    const assessmentsByType = groupAssessmentsByType(formattedAssessments, ASSESSMENT_TYPES)
 
     // Вычисляем средние значения для общей таблицы компетенций
-    const allScores = assessments.flatMap((a) => a.competencyScores)
+    const allCompetencyScores: any[] = assessments.flatMap((a: any) => a.competencyScores)
 
-    const competencyCodes = ['APK', 'COM', 'FPA', 'FPM', 'LTW', 'PSD', 'SAW', 'WLM', 'KNO']
+    const competencyCodes: CompetencyCode[] = [
+      'KNO',
+      'PRO',
+      'FPA',
+      'FPM',
+      'COM',
+      'LDR',
+      'WSA',
+      'WLM',
+      'PSD',
+    ]
     const generalScores = competencyCodes.map((code) => {
-      const scores = allScores.filter((s) => s.competencyCode === code)
+      const scores = allCompetencyScores.filter((s) => s.competencyCode === code)
       const avgScore =
         scores.length > 0
           ? Math.round(scores.reduce((sum, s) => sum + s.score, 0) / scores.length)
@@ -74,7 +81,7 @@ export async function GET() {
 
     const generalAssessment = {
       id: 'general',
-      type: 'EVAL' as AssessmentType,
+      type: 'EVAL',
       date: new Date().toISOString(),
       competencyScores: generalScores,
     }
