@@ -7,11 +7,40 @@ async function main() {
   console.log('Очистка существующих данных...')
   
   // Сначала удаляем данные из зависимых таблиц
-  await prisma.pilotCompetencyScore.deleteMany({})
-  await prisma.competencyWeight.deleteMany({})
-  await prisma.instructor.deleteMany({})
-  await prisma.pilot.deleteMany({})
-  await prisma.userProfile.deleteMany({})
+  try {
+    await prisma.pilotCompetencyScore.deleteMany({})
+    console.log('Удалены записи из PilotCompetencyScore')
+  } catch (e) {
+    console.log('Таблица PilotCompetencyScore не существует или не может быть очищена')
+  }
+  
+  try {
+    await prisma.competencyWeight.deleteMany({})
+    console.log('Удалены записи из CompetencyWeight')
+  } catch (e) {
+    console.log('Таблица CompetencyWeight не существует или не может быть очищена')
+  }
+  
+  try {
+    await prisma.instructor.deleteMany({})
+    console.log('Удалены записи из Instructor')
+  } catch (e) {
+    console.log('Таблица Instructor не существует или не может быть очищена')
+  }
+  
+  try {
+    await prisma.pilot.deleteMany({})
+    console.log('Удалены записи из Pilot')
+  } catch (e) {
+    console.log('Таблица Pilot не существует или не может быть очищена')
+  }
+  
+  try {
+    await prisma.userProfile.deleteMany({})
+    console.log('Удалены записи из UserProfile')
+  } catch (e) {
+    console.log('Таблица UserProfile не существует или не может быть очищена')
+  }
   
   console.log('Данные очищены. Начинаем заполнение...')
 

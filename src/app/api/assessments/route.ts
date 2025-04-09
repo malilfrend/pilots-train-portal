@@ -69,15 +69,14 @@ export async function GET() {
     const generalScores = competencyCodes.map((code) => {
       const scores = allCompetencyScores.filter((s) => s.competencyCode === code)
       const avgScore =
-        scores.length > 0
-          ? Math.round(scores.reduce((sum, s) => sum + s.score, 0) / scores.length)
-          : null
+        scores.length > 0 ? scores.reduce((sum, s) => sum + s.score, 0) / scores.length : null
 
       return {
         competencyCode: code,
         score: avgScore,
       }
     })
+    console.log('generalScores :', generalScores)
 
     const generalAssessment = {
       id: 'general',
