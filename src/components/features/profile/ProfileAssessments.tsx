@@ -164,10 +164,12 @@ export function ProfileAssessments() {
             <table className="min-w-full border-collapse border border-gray-300">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="border border-gray-300 px-4 py-2 text-left">Источник</th>
-                  <th className="border border-gray-300 px-4 py-2 text-left">Оценка (2–5)</th>
-                  <th className="border border-gray-300 px-4 py-2 text-left">Вес</th>
-                  <th className="border border-gray-300 px-4 py-2 text-left">Среднее взвешенное</th>
+                  <th className="border border-gray-300 px-4 py-2 text-center">Источник</th>
+                  <th className="border border-gray-300 px-4 py-2 text-center">Оценка (2–5)</th>
+                  <th className="border border-gray-300 px-4 py-2 text-center">Вес</th>
+                  <th className="border border-gray-300 px-4 py-2 text-center">
+                    Среднее взвешенное
+                  </th>
                 </tr>
               </thead>
               <tbody>
