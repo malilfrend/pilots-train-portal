@@ -22,7 +22,18 @@ interface AuthContextType {
   setUser: (user: User | null) => void
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
+  updateProfile: (data: UpdateProfileData) => Promise<void>
   loading: boolean
+}
+
+// Типизация данных для обновления профиля
+interface UpdateProfileData {
+  firstName: string
+  lastName: string
+  university?: string | null
+  company?: string | null
+  experience?: string | null
+  position?: string | null
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -73,8 +84,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
   }
 
+  const updateProfile = async (data: UpdateProfileData) => {
+    const response = await fetch('/api/profile/update', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Ошибка обновления профиля')
+    }
+
+    const responseData = await response.json()
+    setUser(responseData.user)
+  }
+
   return (
-    <AuthContext.Provider value={{ user, setUser, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, setUser, login, logout, updateProfile, loading }}>
       {children}
     </AuthContext.Provider>
   )
