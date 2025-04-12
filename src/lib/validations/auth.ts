@@ -14,3 +14,15 @@ export const registerSchema = z.object({
 })
 
 export type RegisterFormData = z.infer<typeof registerSchema>
+
+// Схема для обновления профиля пользователя
+export const updateProfileSchema = z.object({
+  firstName: z.string().min(1, 'Имя обязательно'),
+  lastName: z.string().min(1, 'Фамилия обязательна'),
+  university: z.string().optional().nullable(),
+  company: z.string().optional().nullable(),
+  experience: z.string().optional().nullable(),
+  position: z.string().optional().nullable(),
+})
+
+export type UpdateProfileFormData = z.infer<typeof updateProfileSchema>
