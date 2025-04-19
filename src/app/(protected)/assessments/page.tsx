@@ -10,6 +10,7 @@ import {
   CompetencyCode,
   COMPETENCIES,
   ASSESSMENT_TYPES,
+  ASSESSMENT_TYPES_LABELS,
 } from '@/types/assessment'
 
 // Обновленный тип для пилота, соответствующий данным из БД
@@ -36,38 +37,12 @@ interface SaveAssessmentRequest {
   comment?: string
 }
 
-// Названия компетенций
-const competencyNames: Record<CompetencyCode, string> = {
-  KNO: 'Применение знаний (Knowledge)',
-  PRO: 'Следование правилам и процедурам (Procedures)',
-  FPA: 'Пилотирование в автоматическом режиме (Flight Path Automation)',
-  FPM: 'Пилотирование в ручном режиме (Flight Path Manual)',
-  COM: 'Взаимодействие (Communication)',
-  LDR: 'Лидерство и работа в команде (Leadership)',
-  WSA: 'Ситуационная осознанность (Workload and Situation Awareness)',
-  WLM: 'Управление рабочей нагрузкой (Workload Management)',
-  PSD: 'Разрешение проблем и принятие решений (Problem Solving and Decision)',
-}
-
-// Описания компетенций
-const competencyDescriptions: Record<CompetencyCode, string> = {
-  KNO: 'Применение знаний отражает способность пилота применять теоретические знания в практических ситуациях полета и принятии решений.',
-  PRO: 'Следование правилам и процедурам оценивает способность пилота точно выполнять стандартные операционные процедуры и авиационные правила.',
-  FPA: 'Пилотирование в автоматическом режиме оценивает навыки использования автоматических систем управления полетом и понимание их работы.',
-  FPM: 'Пилотирование в ручном режиме показывает способность пилота управлять воздушным судном без использования автоматики.',
-  COM: 'Взаимодействие оценивает качество коммуникации пилота с членами экипажа, диспетчерами и другими участниками полета.',
-  LDR: 'Лидерство и работа в команде отражает способность эффективно руководить экипажем и взаимодействовать в команде.',
-  WSA: 'Ситуационная осознанность показывает, насколько хорошо пилот воспринимает и понимает текущую ситуацию в полете.',
-  WLM: 'Управление рабочей нагрузкой оценивает способность пилота эффективно распределять внимание и ресурсы в различных условиях полета.',
-  PSD: 'Разрешение проблем и принятие решений отражает способность анализировать ситуации, определять варианты действий и принимать обоснованные решения.',
-}
-
 // Веса для источников оценок - будут использоваться если не загружены с сервера
 const defaultWeights: Record<AssessmentSourceType, number> = {
-  KP: 0.35,
-  PADP: 0.15,
+  PC: 0.35,
+  FDM: 0.15,
   EVAL: 0.3,
-  AS: 0.2,
+  ASR: 0.2,
 }
 
 export default function AssessmentsPage() {
@@ -78,65 +53,70 @@ export default function AssessmentsPage() {
   const [pilotAssessments, setPilotAssessments] = useState<
     Record<AssessmentSourceType, Assessment | null>
   >({
-    KP: null,
-    PADP: null,
+    PC: null,
+    FDM: null,
     EVAL: null,
-    AS: null,
+    ASR: null,
   })
   const [scores, setScores] = useState<
     Record<AssessmentSourceType, Record<CompetencyCode, number | null>>
   >({
-    KP: {
-      KNO: null,
+    PC: {
       PRO: null,
+      COM: null,
       FPA: null,
       FPM: null,
-      COM: null,
-      LDR: null,
-      WSA: null,
-      WLM: null,
+      LTW: null,
       PSD: null,
+      SAW: null,
+      WLM: null,
+      KNO: null,
     },
-    PADP: {
-      KNO: null,
+    FDM: {
       PRO: null,
+      COM: null,
       FPA: null,
       FPM: null,
-      COM: null,
-      LDR: null,
-      WSA: null,
-      WLM: null,
+      LTW: null,
       PSD: null,
+      SAW: null,
+      WLM: null,
+      KNO: null,
     },
     EVAL: {
-      KNO: null,
       PRO: null,
+      COM: null,
       FPA: null,
       FPM: null,
-      COM: null,
-      LDR: null,
-      WSA: null,
-      WLM: null,
+      LTW: null,
       PSD: null,
+      SAW: null,
+      WLM: null,
+      KNO: null,
     },
-    AS: {
-      KNO: null,
+    ASR: {
       PRO: null,
+      COM: null,
       FPA: null,
       FPM: null,
-      COM: null,
-      LDR: null,
-      WSA: null,
-      WLM: null,
+      LTW: null,
       PSD: null,
+      SAW: null,
+      WLM: null,
+      KNO: null,
     },
   })
   const [weights, setWeights] = useState<
     Record<CompetencyCode, Record<AssessmentSourceType, number>>
   >({} as Record<CompetencyCode, Record<AssessmentSourceType, number>>)
-  const [comment, setComment] = useState('')
+  const [comments, setComments] = useState<Record<AssessmentSourceType, string>>({
+    PC: '',
+    FDM: '',
+    EVAL: '',
+    ASR: '',
+  })
   const [isSaving, setIsSaving] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -169,49 +149,49 @@ export default function AssessmentsPage() {
     if (pilotAssessments) {
       // Создаем структуру для оценок всех типов
       const allScores: Record<AssessmentSourceType, Record<CompetencyCode, number | null>> = {
-        KP: {
-          KNO: null,
+        PC: {
           PRO: null,
+          COM: null,
           FPA: null,
           FPM: null,
-          COM: null,
-          LDR: null,
-          WSA: null,
-          WLM: null,
+          LTW: null,
           PSD: null,
+          SAW: null,
+          WLM: null,
+          KNO: null,
         },
-        PADP: {
-          KNO: null,
+        FDM: {
           PRO: null,
+          COM: null,
           FPA: null,
           FPM: null,
-          COM: null,
-          LDR: null,
-          WSA: null,
-          WLM: null,
+          LTW: null,
           PSD: null,
+          SAW: null,
+          WLM: null,
+          KNO: null,
         },
         EVAL: {
-          KNO: null,
           PRO: null,
+          COM: null,
           FPA: null,
           FPM: null,
-          COM: null,
-          LDR: null,
-          WSA: null,
-          WLM: null,
+          LTW: null,
           PSD: null,
+          SAW: null,
+          WLM: null,
+          KNO: null,
         },
-        AS: {
-          KNO: null,
+        ASR: {
           PRO: null,
+          COM: null,
           FPA: null,
           FPM: null,
-          COM: null,
-          LDR: null,
-          WSA: null,
-          WLM: null,
+          LTW: null,
           PSD: null,
+          SAW: null,
+          WLM: null,
+          KNO: null,
         },
       }
 
@@ -231,13 +211,11 @@ export default function AssessmentsPage() {
 
       setScores(allScores)
 
-      // Используем комментарий из первой найденной оценки
-      const firstAssessment = Object.values(pilotAssessments).find((a) => a !== null)
-      if (firstAssessment) {
-        setComment(firstAssessment.instructorComment || '')
-      } else {
-        setComment('')
-      }
+      Object.entries(pilotAssessments).forEach(([type, assessment]) => {
+        if (assessment) {
+          setComments((prev) => ({ ...prev, [type]: assessment.instructorComment || '' }))
+        }
+      })
 
       setIsEditing(hasAnyAssessment)
     }
@@ -297,10 +275,10 @@ export default function AssessmentsPage() {
       const data = await response.json()
       setPilotAssessments(
         data.assessments || {
-          KP: null,
-          PADP: null,
+          PC: null,
+          FDM: null,
           EVAL: null,
-          AS: null,
+          ASR: null,
         }
       )
     } catch (error) {
@@ -309,57 +287,6 @@ export default function AssessmentsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const resetForm = () => {
-    setScores({
-      KP: {
-        KNO: null,
-        PRO: null,
-        FPA: null,
-        FPM: null,
-        COM: null,
-        LDR: null,
-        WSA: null,
-        WLM: null,
-        PSD: null,
-      },
-      PADP: {
-        KNO: null,
-        PRO: null,
-        FPA: null,
-        FPM: null,
-        COM: null,
-        LDR: null,
-        WSA: null,
-        WLM: null,
-        PSD: null,
-      },
-      EVAL: {
-        KNO: null,
-        PRO: null,
-        FPA: null,
-        FPM: null,
-        COM: null,
-        LDR: null,
-        WSA: null,
-        WLM: null,
-        PSD: null,
-      },
-      AS: {
-        KNO: null,
-        PRO: null,
-        FPA: null,
-        FPM: null,
-        COM: null,
-        LDR: null,
-        WSA: null,
-        WLM: null,
-        PSD: null,
-      },
-    })
-    setComment('')
-    setIsEditing(false)
   }
 
   const handleScoreChange = (
@@ -412,7 +339,7 @@ export default function AssessmentsPage() {
           type,
           date: new Date().toISOString(),
           competencyScores,
-          comment: comment || undefined,
+          comment: comments[type] || undefined,
         }
 
         const response = await fetch('/api/assessments', {
@@ -455,17 +382,6 @@ export default function AssessmentsPage() {
   // Получить вес для компетенции и источника
   const getWeight = (competencyCode: CompetencyCode, sourceType: AssessmentSourceType): number => {
     return weights[competencyCode]?.[sourceType] || defaultWeights[sourceType] || 0
-  }
-
-  // Получить взвешенное значение оценки
-  const getWeightedValue = (
-    score: number | null,
-    competencyCode: CompetencyCode,
-    sourceType: AssessmentSourceType
-  ): string => {
-    if (score === null) return '—'
-    const weight = getWeight(competencyCode, sourceType)
-    return (score * weight).toFixed(2)
   }
 
   // Рассчитать средневзвешенное значение для компетенции
@@ -574,40 +490,33 @@ export default function AssessmentsPage() {
                   )}
                 </div>
 
-                {/* Таблицы компетенций */}
+                {/* Таблицы по источникам */}
                 <div className="space-y-12 mb-6">
-                  {Object.keys(COMPETENCIES).map((code) => {
-                    const competencyCode = code as CompetencyCode
+                  {ASSESSMENT_TYPES.map((sourceType) => {
                     return (
-                      <div key={competencyCode} className="bg-white p-6 rounded-lg shadow">
+                      <div key={sourceType} className="bg-white p-6 rounded-lg shadow">
                         <h3 className="text-xl font-semibold mb-4">
-                          {competencyNames[competencyCode]}
+                          {ASSESSMENT_TYPES_LABELS[sourceType] || sourceType}
                         </h3>
-
                         <div className="overflow-x-auto">
-                          <table className="min-w-full border-collapse border border-gray-300">
+                          <table className="min-w-full border-collapse border border-gray-300 mb-6">
                             <thead>
                               <tr className="bg-gray-100">
                                 <th className="border border-gray-300 px-4 py-2 text-center">
-                                  Источник
+                                  Компетенция
                                 </th>
                                 <th className="border border-gray-300 px-4 py-2 text-center">
                                   Оценка (2–5)
                                 </th>
-                                <th className="border border-gray-300 px-4 py-2 text-center">
-                                  Вес
-                                </th>
-                                <th className="border border-gray-300 px-4 py-2 text-center">
-                                  Среднее взвешенное
-                                </th>
                               </tr>
                             </thead>
                             <tbody>
-                              {ASSESSMENT_TYPES.map((sourceType) => {
+                              {Object.entries(COMPETENCIES).map(([code, competency]) => {
+                                const competencyCode = code as CompetencyCode
                                 return (
-                                  <tr key={sourceType}>
+                                  <tr key={competencyCode}>
                                     <td className="border border-gray-300 px-4 py-2">
-                                      {sourceType}
+                                      {competencyCode} | {competency.name} | {competency.nameEn}
                                     </td>
                                     <td className="border border-gray-300 px-4 py-2 text-center">
                                       <select
@@ -636,35 +545,30 @@ export default function AssessmentsPage() {
                                         ))}
                                       </select>
                                     </td>
-                                    <td className="border border-gray-300 px-4 py-2 text-center">
-                                      {getWeight(competencyCode, sourceType).toFixed(2)}
-                                    </td>
-                                    <td className="border border-gray-300 px-4 py-2 text-center">
-                                      {getWeightedValue(
-                                        getCurrentScore(sourceType, competencyCode),
-                                        competencyCode,
-                                        sourceType
-                                      )}
-                                    </td>
                                   </tr>
                                 )
                               })}
-                              <tr className="bg-green-50">
-                                <td className="border border-gray-300 px-4 py-2 font-semibold">
-                                  ИТОГ
-                                </td>
-                                <td className="border border-gray-300 px-4 py-2"></td>
-                                <td className="border border-gray-300 px-4 py-2"></td>
-                                <td className="border border-gray-300 px-4 py-2 text-center font-bold">
-                                  {calculateAverage(competencyCode)}
-                                </td>
-                              </tr>
                             </tbody>
                           </table>
-                        </div>
 
-                        <div className="mt-4 p-4 bg-gray-50 rounded-md">
-                          <p className="text-sm italic">{competencyDescriptions[competencyCode]}</p>
+                          <div className="mb-6">
+                            <label
+                              htmlFor="instructorComment"
+                              className="block text-lg font-semibold text-gray-700 mb-2"
+                            >
+                              Комментарий инструктора
+                            </label>
+                            <textarea
+                              id="instructorComment"
+                              className="w-full p-2 border rounded-md"
+                              rows={4}
+                              value={comments[sourceType]}
+                              onChange={(e) =>
+                                setComments({ ...comments, [sourceType]: e.target.value })
+                              }
+                              placeholder="Введите комментарий к оценке..."
+                            />
+                          </div>
                         </div>
                       </div>
                     )
@@ -688,12 +592,14 @@ export default function AssessmentsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {Object.keys(COMPETENCIES).map((code) => {
+                        {Object.entries(COMPETENCIES).map(([code, competency]) => {
                           const competencyCode = code as CompetencyCode
                           return (
                             <tr key={competencyCode}>
                               <td className="border border-gray-300 px-4 py-2">
-                                <div className="font-medium">{competencyNames[competencyCode]}</div>
+                                <div className="font-medium">
+                                  {competencyCode} | {competency.name} | {competency.nameEn}
+                                </div>
                               </td>
                               <td className="border border-gray-300 px-4 py-2 text-center font-bold">
                                 {calculateAverage(competencyCode)}
@@ -715,23 +621,6 @@ export default function AssessmentsPage() {
 
                 {/* Комментарий и кнопка сохранения */}
                 <div className="bg-white p-6 rounded-lg shadow mb-6">
-                  <div className="mb-6">
-                    <label
-                      htmlFor="instructorComment"
-                      className="block text-lg font-semibold text-gray-700 mb-2"
-                    >
-                      Комментарий инструктора
-                    </label>
-                    <textarea
-                      id="instructorComment"
-                      className="w-full p-2 border rounded-md"
-                      rows={4}
-                      value={comment}
-                      onChange={(e) => setComment(e.target.value)}
-                      placeholder="Введите комментарий к оценке..."
-                    />
-                  </div>
-
                   {/* Кнопка сохранения */}
                   <div className="flex justify-end">
                     <button

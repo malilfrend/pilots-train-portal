@@ -57,15 +57,15 @@ export async function GET() {
     const allCompetencyScores: any[] = assessments.flatMap((a: any) => a.competencyScores)
 
     const competencyCodes: CompetencyCode[] = [
-      'KNO',
       'PRO',
+      'COM',
       'FPA',
       'FPM',
-      'COM',
-      'LDR',
-      'WSA',
-      'WLM',
+      'LTW',
       'PSD',
+      'SAW',
+      'WLM',
+      'KNO',
     ]
     const generalScores = competencyCodes.map((code) => {
       const scores = allCompetencyScores.filter((s) => s.competencyCode === code)
@@ -77,7 +77,6 @@ export async function GET() {
         score: avgScore,
       }
     })
-    console.log('generalScores :', generalScores)
 
     const generalAssessment = {
       id: 'general',
