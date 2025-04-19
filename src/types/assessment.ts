@@ -1,4 +1,16 @@
-export type CompetencyCode = 'KNO' | 'PRO' | 'FPA' | 'FPM' | 'COM' | 'LDR' | 'WSA' | 'WLM' | 'PSD'
+export type CompetencyCode = 'PRO' | 'COM' | 'FPA' | 'FPM' | 'LTW' | 'PSD' | 'SAW' | 'WLM' | 'KNO'
+
+export const COMPETENCIES_CODES: CompetencyCode[] = [
+  'PRO',
+  'COM',
+  'FPA',
+  'FPM',
+  'LTW',
+  'PSD',
+  'SAW',
+  'WLM',
+  'KNO',
+] as const
 
 export type Competency = {
   code: CompetencyCode
@@ -12,9 +24,9 @@ export type CompetencyScore = {
   score: number | null
 }
 
-export type AssessmentSourceType = 'KP' | 'PADP' | 'EVAL' | 'AS'
+export type AssessmentSourceType = 'PC' | 'FDM' | 'EVAL' | 'ASR'
 
-export const ASSESSMENT_TYPES: AssessmentSourceType[] = ['KP', 'PADP', 'EVAL', 'AS']
+export const ASSESSMENT_TYPES: AssessmentSourceType[] = ['EVAL', 'PC', 'ASR', 'FDM']
 
 export type Assessment = {
   id: string
@@ -25,13 +37,14 @@ export type Assessment = {
   instructorName?: string
 }
 
+export const ASSESSMENT_TYPES_LABELS: Record<AssessmentSourceType, string> = {
+  EVAL: 'Этап оценки (Evaluation phase, EVAL)',
+  PC: 'Квалификационная проверка (Proficiency check, PC)',
+  ASR: 'Авиационное событие (Aviation safety report, ASR)',
+  FDM: 'Программа анализа полетных данных (Flight data monitoring, FDM)',
+}
+
 export const COMPETENCIES: Record<CompetencyCode, Competency> = {
-  KNO: {
-    code: 'KNO',
-    name: 'Применение знаний',
-    nameEn: 'Knowledge',
-    description: 'Способность применять соответствующие знания',
-  },
   PRO: {
     code: 'PRO',
     name: 'Следование правилам и процедурам',
@@ -56,10 +69,10 @@ export const COMPETENCIES: Record<CompetencyCode, Competency> = {
     nameEn: 'Flight Path Manual',
     description: 'Способность управлять траекторией полета вручную',
   },
-  LDR: {
-    code: 'LDR',
+  LTW: {
+    code: 'LTW',
     name: 'Лидерство и работа в команде',
-    nameEn: 'Leadership',
+    nameEn: 'Leadership and Teamwork',
     description: 'Способность эффективно управлять и работать в команде',
   },
   PSD: {
@@ -68,10 +81,10 @@ export const COMPETENCIES: Record<CompetencyCode, Competency> = {
     nameEn: 'Problem Solving and Decision',
     description: 'Способность анализировать проблемы и принимать обоснованные решения',
   },
-  WSA: {
-    code: 'WSA',
+  SAW: {
+    code: 'SAW',
     name: 'Ситуационная осознанность',
-    nameEn: 'Workload and Situation Awareness',
+    nameEn: 'Situation Awareness and Info Management',
     description: 'Способность воспринимать и понимать всю ситуацию полета',
   },
   WLM: {
@@ -79,5 +92,11 @@ export const COMPETENCIES: Record<CompetencyCode, Competency> = {
     name: 'Управление рабочей нагрузкой',
     nameEn: 'Workload Management',
     description: 'Способность эффективно управлять задачами и ресурсами',
+  },
+  KNO: {
+    code: 'KNO',
+    name: 'Применение знаний',
+    nameEn: 'Knowledge',
+    description: 'Способность применять соответствующие знания',
   },
 }

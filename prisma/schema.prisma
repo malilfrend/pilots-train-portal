@@ -16,22 +16,22 @@ enum UserRole {
 
 // Типы оценки (источники оценки)
 enum AssessmentSourceType {
-  KP            // Квалификационная проверка
-  PADP          // Программа анализа данных полета
-  EVAL          // Оценка
-  AS            // Авиационное событие
+  PC            // Proficiency check
+  FDM          // Flight data monitoring
+  EVAL          // Evaluation phase
+  ASR            // Aviation safety report
 }
 
 enum CompetencyCode {
-  KNO           // Knowledge
   PRO           // Procedures
+  COM           // Communication
   FPA           // Flight Path Automation
   FPM           // Flight Path Manual
-  COM           // Communication
-  LDR           // Leadership
-  WSA           // Workload and Situation Awareness
-  WLM           // Workload Management
+  LTW           // Leadership ans Teamwork
   PSD           // Problem Solving and Decision
+  SAW           // Situational Awareness
+  WLM           // Workload Management
+  KNO           // Knowledge
 }
 
 // Базовый профиль пользователя

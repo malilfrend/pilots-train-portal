@@ -24,6 +24,11 @@ export function MainNav() {
       label: 'Оценки',
       active: pathname.startsWith('/assessments'),
     })
+    routes.push({
+      href: '/competency-weights',
+      label: 'Весовые коэффициенты',
+      active: pathname.startsWith('/competency-weights'),
+    })
   }
 
   // Дополнительные маршруты для администраторов
