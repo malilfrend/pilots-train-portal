@@ -23,3 +23,34 @@ export async function getCompetencyWeights() {
 
   return groupedWeights
 }
+
+/**
+ * Обновляет веса компетенций в базе данных
+ * @param newWeights - объект вида { [competencyCode]: { [sourceType]: weight } }
+ */
+export async function updateCompetencyWeights(newWeights: Record<string, Record<string, number>>) {
+  const operations = []
+  for (const competencyCode in newWeights) {
+    for (const sourceType in newWeights[competencyCode]) {
+      const weight = newWeights[competencyCode][sourceType]
+      operations.push(
+        prisma.competencyWeight.upsert({
+          where: {
+            competencyCode_sourceType: {
+              competencyCode: competencyCode as CompetencyCode,
+              sourceType: sourceType as any, // AssessmentSourceType, но prisma может ожидать enum
+            },
+          },
+          update: { weight },
+          create: {
+            competencyCode: competencyCode as CompetencyCode,
+            sourceType: sourceType as any, // AssessmentSourceType
+            weight,
+          },
+        })
+      )
+    }
+  }
+  await prisma.$transaction(operations)
+  return true
+}
