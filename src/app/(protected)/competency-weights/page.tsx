@@ -12,9 +12,6 @@ import {
 } from '@/types/assessment'
 
 export default function CompetencyWeightsPage() {
-  const [weights, setWeights] = useState<
-    Record<CompetencyCode, Record<AssessmentSourceType, number>>
-  >({} as any)
   const [editWeights, setEditWeights] = useState<
     Record<CompetencyCode, Record<AssessmentSourceType, string>>
   >({} as any)
@@ -51,7 +48,6 @@ export default function CompetencyWeightsPage() {
       const res = await fetch('/api/competency-weights')
       if (!res.ok) throw new Error('Ошибка загрузки весов')
       const data = await res.json()
-      setWeights(data.weights)
       // Для редактирования используем строки (для удобства input)
       setEditWeights(
         Object.fromEntries(

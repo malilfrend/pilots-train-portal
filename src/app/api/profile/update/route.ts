@@ -26,7 +26,7 @@ export async function PUT(request: Request) {
     const validated = updateProfileSchema.parse(body)
 
     // Обновляем профиль пользователя
-    const updatedProfile = await prisma.userProfile.update({
+    await prisma.userProfile.update({
       where: { id: payload.id as number },
       data: {
         firstName: validated.firstName,
