@@ -106,3 +106,32 @@ model PilotCompetencyScore {
 
   @@unique([pilotId, competencyCode, sourceType]) // Уникальное сочетание пилота, компетенции и источника
 }
+
+// Упражнение со связкой с компетенциями
+model Exercise {
+  /// Авто‑инкрементный уникальный идентификатор упражнения
+  id          Int                       @id @default(autoincrement())
+
+  /// Название упражнения
+  name        String
+
+  /// Связь с компетенциями, которые развивает это упражнение
+  competencies ExerciseCompetency[]
+
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+}
+
+/// Таблица‑связка для many‑to‑many между Exercise и enum’ом CompetencyCode
+model ExerciseCompetency {
+  exercise        Exercise             @relation(fields: [exerciseId], references: [id])
+  exerciseId      Int
+
+  /// Одна из компетенций из enum CompetencyCode
+  competencyCode  CompetencyCode
+
+  /// Композитный первичный ключ, чтобы одна и та же пара не дублировалась
+  @@id([exerciseId, competencyCode])
+  /// Индекс для ускорения выборок по компетенции (опционально)
+  @@index([competencyCode])
+}

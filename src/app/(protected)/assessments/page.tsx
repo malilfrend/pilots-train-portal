@@ -45,6 +45,18 @@ const defaultWeights: Record<AssessmentSourceType, number> = {
   ASR: 0.2,
 }
 
+const initialScores = {
+  PRO: null,
+  COM: null,
+  FPA: null,
+  FPM: null,
+  LTW: null,
+  PSD: null,
+  SAW: null,
+  WLM: null,
+  KNO: null,
+}
+
 export default function AssessmentsPage() {
   const { user } = useAuth()
   const router = useRouter()
@@ -149,50 +161,10 @@ export default function AssessmentsPage() {
     if (pilotAssessments) {
       // Создаем структуру для оценок всех типов
       const allScores: Record<AssessmentSourceType, Record<CompetencyCode, number | null>> = {
-        PC: {
-          PRO: null,
-          COM: null,
-          FPA: null,
-          FPM: null,
-          LTW: null,
-          PSD: null,
-          SAW: null,
-          WLM: null,
-          KNO: null,
-        },
-        FDM: {
-          PRO: null,
-          COM: null,
-          FPA: null,
-          FPM: null,
-          LTW: null,
-          PSD: null,
-          SAW: null,
-          WLM: null,
-          KNO: null,
-        },
-        EVAL: {
-          PRO: null,
-          COM: null,
-          FPA: null,
-          FPM: null,
-          LTW: null,
-          PSD: null,
-          SAW: null,
-          WLM: null,
-          KNO: null,
-        },
-        ASR: {
-          PRO: null,
-          COM: null,
-          FPA: null,
-          FPM: null,
-          LTW: null,
-          PSD: null,
-          SAW: null,
-          WLM: null,
-          KNO: null,
-        },
+        PC: initialScores,
+        FDM: initialScores,
+        EVAL: initialScores,
+        ASR: initialScores,
       }
 
       // Заполняем данными из загруженных оценок

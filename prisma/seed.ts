@@ -1,5 +1,7 @@
 import { PrismaClient, UserRole, CompetencyCode, AssessmentSourceType } from '@prisma/client'
 import { hash } from 'bcrypt'
+import * as XLSX from 'xlsx'
+import path from 'path'
 
 const prisma = new PrismaClient()
 
@@ -132,55 +134,54 @@ async function main() {
   // Создаем веса компетенций для разных источников
   const competencyWeights = [
     // PRO - Procedures
-    { competencyCode: CompetencyCode.PRO, sourceType: 'PC', weight: 0.3 },
-    { competencyCode: CompetencyCode.PRO, sourceType: 'FDM', weight: 0.2 },
-    { competencyCode: CompetencyCode.PRO, sourceType: 'EVAL', weight: 0.3 },
-    { competencyCode: CompetencyCode.PRO, sourceType: 'ASR', weight: 0.2 },
+    { competencyCode: CompetencyCode.PRO, sourceType: AssessmentSourceType.PC, weight: 0.3 },
+    { competencyCode: CompetencyCode.PRO, sourceType: AssessmentSourceType.FDM, weight: 0.2 },
+    { competencyCode: CompetencyCode.PRO, sourceType: AssessmentSourceType.EVAL, weight: 0.3 },
+    { competencyCode: CompetencyCode.PRO, sourceType: AssessmentSourceType.ASR, weight: 0.2 },
     // COM - Communication
-    { competencyCode: CompetencyCode.COM, sourceType: 'PC', weight: 0.25 },
-    { competencyCode: CompetencyCode.COM, sourceType: 'FDM', weight: 0.2 },
-    { competencyCode: CompetencyCode.COM, sourceType: 'EVAL', weight: 0.35 },
-    { competencyCode: CompetencyCode.COM, sourceType: 'ASR', weight: 0.2 },
+    { competencyCode: CompetencyCode.COM, sourceType: AssessmentSourceType.PC, weight: 0.25 },
+    { competencyCode: CompetencyCode.COM, sourceType: AssessmentSourceType.FDM, weight: 0.2 },
+    { competencyCode: CompetencyCode.COM, sourceType: AssessmentSourceType.EVAL, weight: 0.35 },
+    { competencyCode: CompetencyCode.COM, sourceType: AssessmentSourceType.ASR, weight: 0.2 },
     // FPA - Flight Path Automation
-    { competencyCode: CompetencyCode.FPA, sourceType: 'PC', weight: 0.25 },
-    { competencyCode: CompetencyCode.FPA, sourceType: 'FDM', weight: 0.3 },
-    { competencyCode: CompetencyCode.FPA, sourceType: 'EVAL', weight: 0.25 },
-    { competencyCode: CompetencyCode.FPA, sourceType: 'ASR', weight: 0.2 },
+    { competencyCode: CompetencyCode.FPA, sourceType: AssessmentSourceType.PC, weight: 0.25 },
+    { competencyCode: CompetencyCode.FPA, sourceType: AssessmentSourceType.FDM, weight: 0.3 },
+    { competencyCode: CompetencyCode.FPA, sourceType: AssessmentSourceType.EVAL, weight: 0.25 },
+    { competencyCode: CompetencyCode.FPA, sourceType: AssessmentSourceType.ASR, weight: 0.2 },
     // FPM - Flight Path Manual
-    { competencyCode: CompetencyCode.FPM, sourceType: 'PC', weight: 0.3 },
-    { competencyCode: CompetencyCode.FPM, sourceType: 'FDM', weight: 0.25 },
-    { competencyCode: CompetencyCode.FPM, sourceType: 'EVAL', weight: 0.25 },
-    { competencyCode: CompetencyCode.FPM, sourceType: 'ASR', weight: 0.2 },
+    { competencyCode: CompetencyCode.FPM, sourceType: AssessmentSourceType.PC, weight: 0.3 },
+    { competencyCode: CompetencyCode.FPM, sourceType: AssessmentSourceType.FDM, weight: 0.25 },
+    { competencyCode: CompetencyCode.FPM, sourceType: AssessmentSourceType.EVAL, weight: 0.25 },
+    { competencyCode: CompetencyCode.FPM, sourceType: AssessmentSourceType.ASR, weight: 0.2 },
     // LTW - Leadership and Teamwork
-    { competencyCode: CompetencyCode.LTW, sourceType: 'PC', weight: 0.2 },
-    { competencyCode: CompetencyCode.LTW, sourceType: 'FDM', weight: 0.15 },
-    { competencyCode: CompetencyCode.LTW, sourceType: 'EVAL', weight: 0.4 },
-    { competencyCode: CompetencyCode.LTW, sourceType: 'ASR', weight: 0.25 },
+    { competencyCode: CompetencyCode.LTW, sourceType: AssessmentSourceType.PC, weight: 0.2 },
+    { competencyCode: CompetencyCode.LTW, sourceType: AssessmentSourceType.FDM, weight: 0.15 },
+    { competencyCode: CompetencyCode.LTW, sourceType: AssessmentSourceType.EVAL, weight: 0.4 },
+    { competencyCode: CompetencyCode.LTW, sourceType: AssessmentSourceType.ASR, weight: 0.25 },
     // PSD - Problem Solving and Decision
-    { competencyCode: CompetencyCode.PSD, sourceType: 'PC', weight: 0.25 },
-    { competencyCode: CompetencyCode.PSD, sourceType: 'FDM', weight: 0.15 },
-    { competencyCode: CompetencyCode.PSD, sourceType: 'EVAL', weight: 0.3 },
-    { competencyCode: CompetencyCode.PSD, sourceType: 'ASR', weight: 0.3 },
+    { competencyCode: CompetencyCode.PSD, sourceType: AssessmentSourceType.PC, weight: 0.25 },
+    { competencyCode: CompetencyCode.PSD, sourceType: AssessmentSourceType.FDM, weight: 0.15 },
+    { competencyCode: CompetencyCode.PSD, sourceType: AssessmentSourceType.EVAL, weight: 0.3 },
+    { competencyCode: CompetencyCode.PSD, sourceType: AssessmentSourceType.ASR, weight: 0.3 },
     // SAW - Situational Awareness
-    { competencyCode: CompetencyCode.SAW, sourceType: 'PC', weight: 0.25 },
-    { competencyCode: CompetencyCode.SAW, sourceType: 'FDM', weight: 0.2 },
-    { competencyCode: CompetencyCode.SAW, sourceType: 'EVAL', weight: 0.3 },
-    { competencyCode: CompetencyCode.SAW, sourceType: 'ASR', weight: 0.25 },
+    { competencyCode: CompetencyCode.SAW, sourceType: AssessmentSourceType.PC, weight: 0.25 },
+    { competencyCode: CompetencyCode.SAW, sourceType: AssessmentSourceType.FDM, weight: 0.2 },
+    { competencyCode: CompetencyCode.SAW, sourceType: AssessmentSourceType.EVAL, weight: 0.3 },
+    { competencyCode: CompetencyCode.SAW, sourceType: AssessmentSourceType.ASR, weight: 0.25 },
     // WLM - Workload Management
-    { competencyCode: CompetencyCode.WLM, sourceType: 'PC', weight: 0.25 },
-    { competencyCode: CompetencyCode.WLM, sourceType: 'FDM', weight: 0.2 },
-    { competencyCode: CompetencyCode.WLM, sourceType: 'EVAL', weight: 0.3 },
-    { competencyCode: CompetencyCode.WLM, sourceType: 'ASR', weight: 0.25 },
+    { competencyCode: CompetencyCode.WLM, sourceType: AssessmentSourceType.PC, weight: 0.25 },
+    { competencyCode: CompetencyCode.WLM, sourceType: AssessmentSourceType.FDM, weight: 0.2 },
+    { competencyCode: CompetencyCode.WLM, sourceType: AssessmentSourceType.EVAL, weight: 0.3 },
+    { competencyCode: CompetencyCode.WLM, sourceType: AssessmentSourceType.ASR, weight: 0.25 },
     // KNO - Knowledge
-    { competencyCode: CompetencyCode.KNO, sourceType: 'PC', weight: 0.35 },
-    { competencyCode: CompetencyCode.KNO, sourceType: 'FDM', weight: 0.15 },
-    { competencyCode: CompetencyCode.KNO, sourceType: 'EVAL', weight: 0.35 },
-    { competencyCode: CompetencyCode.KNO, sourceType: 'ASR', weight: 0.15 },
+    { competencyCode: CompetencyCode.KNO, sourceType: AssessmentSourceType.PC, weight: 0.35 },
+    { competencyCode: CompetencyCode.KNO, sourceType: AssessmentSourceType.FDM, weight: 0.15 },
+    { competencyCode: CompetencyCode.KNO, sourceType: AssessmentSourceType.EVAL, weight: 0.35 },
+    { competencyCode: CompetencyCode.KNO, sourceType: AssessmentSourceType.ASR, weight: 0.15 },
   ]
 
   for (const weight of competencyWeights) {
     await prisma.competencyWeight.create({
-      //@ts-ignore
       data: weight
     })
   }
@@ -197,7 +198,12 @@ async function main() {
     CompetencyCode.WLM,
     CompetencyCode.KNO,
   ];
-  const allSources = ['PC', 'FDM', 'EVAL', 'ASR'];
+  const allSources = [
+    AssessmentSourceType.PC,
+    AssessmentSourceType.FDM,
+    AssessmentSourceType.EVAL,
+    AssessmentSourceType.ASR
+  ];
 
   // Генерируем оценки для каждого пилота, источника и компетенции
   for (const pilot of [vertoletovPilot, poletaevPilot]) {
@@ -208,7 +214,7 @@ async function main() {
             pilotId: pilot.id,
             instructorId: mentor.id,
             competencyCode: code,
-            sourceType: sourceType as AssessmentSourceType,
+            sourceType: sourceType,
             score: Math.floor(Math.random() * 4) + 2, // случайная оценка 2-5
             date: new Date('2024-02-10'),
             comment: `Тестовая оценка для ${code} (${sourceType})`,
@@ -219,6 +225,43 @@ async function main() {
   }
 
   console.log('База данных успешно заполнена тестовыми пользователями и оценками')
+
+  console.log('Начинаем загрузку упражнений из Excel…')
+
+  // Путь к файлу: поправьте, если seed.ts лежит не рядом с Excel'ем
+  const filePath = path.join(__dirname, 'exercises.xlsx')
+  const workbook = XLSX.readFile(filePath)
+  const sheet = workbook.Sheets[workbook.SheetNames[0]]
+  const rows: Record<string, any>[] = XLSX.utils.sheet_to_json(sheet, { defval: null })
+
+  const competencyCols = ['PRO','COM','FPA','FPM','LTW','PSD','SAW','WLM','KNO']
+
+  for (const row of rows) {
+    const name = row.Name?.toString().trim()
+    if (!name) continue
+
+    // Выбираем все колонки‑компетенции, где в ячейке стоит отметка (например 'x')
+    const comps = competencyCols.filter(code => {
+      const v = row[code]
+      return v !== null && (v?.toString()?.toLowerCase() === 'x' || v === true)
+    })
+
+    // Создаём упражнение с вложенной вставкой компетенций
+    const exercise = await prisma.exercise.create({
+      data: {
+        name,
+        competencies: {
+          create: comps.map(code => ({
+            competencyCode: code as CompetencyCode
+          }))
+        }
+      }
+    })
+
+    console.log(`Добавлено упражнение #${exercise.id}: "${name}" → [${comps.join(', ')}]`)
+  }
+
+  console.log('Все упражнения загружены.')
 }
 
 main()
