@@ -25,6 +25,11 @@ export function MainNav() {
       active: pathname.startsWith('/assessments'),
     })
     routes.push({
+      href: '/sessions',
+      label: 'Сессии',
+      active: pathname.startsWith('/sessions'),
+    })
+    routes.push({
       href: '/competency-weights',
       label: 'Весовые коэффициенты',
       active: pathname.startsWith('/competency-weights'),
