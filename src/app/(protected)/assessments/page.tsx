@@ -12,18 +12,7 @@ import {
   ASSESSMENT_TYPES,
   ASSESSMENT_TYPES_LABELS,
 } from '@/types/assessment'
-
-// Обновленный тип для пилота, соответствующий данным из БД
-interface Pilot {
-  id: number
-  profileId: number
-  profile: {
-    id: number
-    firstName: string
-    lastName: string
-    position?: string
-  }
-}
+import { TPilot } from '@/types/pilots'
 
 // Интерфейс для запроса на создание/обновление оценки
 interface SaveAssessmentRequest {
@@ -60,8 +49,8 @@ const initialScores = {
 export default function AssessmentsPage() {
   const { user } = useAuth()
   const router = useRouter()
-  const [pilots, setPilots] = useState<Pilot[]>([])
-  const [selectedPilot, setSelectedPilot] = useState<Pilot | null>(null)
+  const [pilots, setPilots] = useState<TPilot[]>([])
+  const [selectedPilot, setSelectedPilot] = useState<TPilot | null>(null)
   const [pilotAssessments, setPilotAssessments] = useState<
     Record<AssessmentSourceType, Assessment | null>
   >({

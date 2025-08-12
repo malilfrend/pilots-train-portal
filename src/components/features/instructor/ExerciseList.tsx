@@ -1,6 +1,5 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { CompetencyCode, COMPETENCIES } from '@/types/assessment'
 
 interface Exercise {
@@ -9,52 +8,11 @@ interface Exercise {
   competencies: CompetencyCode[]
 }
 
-export function ExerciseList() {
-  const [exercises, setExercises] = useState<Exercise[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+type TProps = {
+  exercises: Exercise[]
+}
 
-  useEffect(() => {
-    fetchExercises()
-  }, [])
-
-  const fetchExercises = async () => {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const response = await fetch('/api/exercises')
-
-      if (!response.ok) {
-        throw new Error('Ошибка при загрузке упражнений')
-      }
-
-      const data = await response.json()
-      setExercises(data)
-    } catch (error) {
-      console.error('Ошибка при загрузке упражнений:', error)
-      setError(error instanceof Error ? error.message : 'Неизвестная ошибка')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="bg-white p-6 rounded-lg shadow">
-        <div className="flex justify-center">
-          <p className="text-gray-600">Загрузка упражнений...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">{error}</div>
-    )
-  }
-
+export function ExerciseList({ exercises }: TProps) {
   if (exercises.length === 0) {
     return (
       <div className="bg-white p-6 rounded-lg shadow">
