@@ -31,7 +31,6 @@ enum CompetencyCode {
   PSD           // Problem Solving and Decision
   SAW           // Situational Awareness
   WLM           // Workload Management
-  KNO           // Knowledge
 }
 
 // Базовый профиль пользователя
@@ -80,7 +79,7 @@ model Instructor {
 // Веса компетенций для разных источников
 model CompetencyWeight {
   id              Int               @id @default(autoincrement())
-  competencyCode  CompetencyCode    // Код компетенции (KNO, PRO, и т.д.)
+  competencyCode  CompetencyCode    // Код компетенции (SLW, PRO, и т.д.)
   sourceType      AssessmentSourceType // Тип источника (KP, PADP, EVAL, AS)
   weight          Float             // Вес источника для данной компетенции (0.35, 0.1, и т.д.)
   createdAt       DateTime          @default(now())

@@ -173,11 +173,6 @@ async function main() {
     { competencyCode: CompetencyCode.WLM, sourceType: AssessmentSourceType.FDM, weight: 0.2 },
     { competencyCode: CompetencyCode.WLM, sourceType: AssessmentSourceType.EVAL, weight: 0.3 },
     { competencyCode: CompetencyCode.WLM, sourceType: AssessmentSourceType.ASR, weight: 0.25 },
-    // KNO - Knowledge
-    { competencyCode: CompetencyCode.KNO, sourceType: AssessmentSourceType.PC, weight: 0.35 },
-    { competencyCode: CompetencyCode.KNO, sourceType: AssessmentSourceType.FDM, weight: 0.15 },
-    { competencyCode: CompetencyCode.KNO, sourceType: AssessmentSourceType.EVAL, weight: 0.35 },
-    { competencyCode: CompetencyCode.KNO, sourceType: AssessmentSourceType.ASR, weight: 0.15 },
   ]
 
   for (const weight of competencyWeights) {
@@ -196,7 +191,6 @@ async function main() {
     CompetencyCode.PSD,
     CompetencyCode.SAW,
     CompetencyCode.WLM,
-    CompetencyCode.KNO,
   ];
   const allSources = [
     AssessmentSourceType.PC,
@@ -234,7 +228,7 @@ async function main() {
   const sheet = workbook.Sheets[workbook.SheetNames[0]]
   const rows: Record<string, any>[] = XLSX.utils.sheet_to_json(sheet, { defval: null })
 
-  const competencyCols = ['PRO','COM','FPA','FPM','LTW','PSD','SAW','WLM','KNO']
+  const competencyCols = ['PRO','COM','FPA','FPM','LTW','PSD','SAW','WLM']
 
   for (const row of rows) {
     const name = row.Name?.toString().trim()

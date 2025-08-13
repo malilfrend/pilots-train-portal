@@ -1,4 +1,4 @@
-export type CompetencyCode = 'PRO' | 'COM' | 'FPA' | 'FPM' | 'LTW' | 'PSD' | 'SAW' | 'WLM' | 'KNO'
+export type CompetencyCode = 'PRO' | 'COM' | 'FPA' | 'FPM' | 'LTW' | 'PSD' | 'SAW' | 'WLM'
 
 export const COMPETENCIES_CODES: CompetencyCode[] = [
   'PRO',
@@ -9,7 +9,6 @@ export const COMPETENCIES_CODES: CompetencyCode[] = [
   'PSD',
   'SAW',
   'WLM',
-  'KNO',
 ] as const
 
 export type Competency = {
@@ -92,11 +91,5 @@ export const COMPETENCIES: Record<CompetencyCode, Competency> = {
     name: 'Управление рабочей нагрузкой',
     nameEn: 'Workload Management',
     description: 'Способность эффективно управлять задачами и ресурсами',
-  },
-  KNO: {
-    code: 'KNO',
-    name: 'Применение знаний',
-    nameEn: 'Knowledge',
-    description: 'Способность применять соответствующие знания',
   },
 }

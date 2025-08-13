@@ -117,7 +117,6 @@ async function getPilotAverages(
     'PSD',
     'SAW',
     'WLM',
-    'KNO',
   ]
 
   allCompetencyCodes.forEach((competencyCode) => {
@@ -129,10 +128,11 @@ async function getPilotAverages(
 
   // Заполняем реальными оценками
   scores.forEach((score) => {
-    if (!scoresByCompetency[score.competencyCode]) {
-      scoresByCompetency[score.competencyCode] = {} as Record<AssessmentSourceType, number | null>
-    }
-    scoresByCompetency[score.competencyCode][score.sourceType] = score.score
+    // Явно приводим ключ к типу CompetencyCode для корректной типизации
+    const competencyCode = score.competencyCode as CompetencyCode
+    const sourceType = score.sourceType as AssessmentSourceType
+    // Предполагаем, что всеCompetencyCodes инициализированы выше, поэтому проверки не требуется
+    scoresByCompetency[competencyCode][sourceType] = score.score
   })
 
   // Вычисляем средневзвешенные значения для каждой компетенции

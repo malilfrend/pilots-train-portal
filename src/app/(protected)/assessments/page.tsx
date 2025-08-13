@@ -43,7 +43,6 @@ const initialScores = {
   PSD: null,
   SAW: null,
   WLM: null,
-  KNO: null,
 }
 
 export default function AssessmentsPage() {
@@ -71,7 +70,6 @@ export default function AssessmentsPage() {
       PSD: null,
       SAW: null,
       WLM: null,
-      KNO: null,
     },
     FDM: {
       PRO: null,
@@ -82,7 +80,6 @@ export default function AssessmentsPage() {
       PSD: null,
       SAW: null,
       WLM: null,
-      KNO: null,
     },
     EVAL: {
       PRO: null,
@@ -93,7 +90,6 @@ export default function AssessmentsPage() {
       PSD: null,
       SAW: null,
       WLM: null,
-      KNO: null,
     },
     ASR: {
       PRO: null,
@@ -104,7 +100,6 @@ export default function AssessmentsPage() {
       PSD: null,
       SAW: null,
       WLM: null,
-      KNO: null,
     },
   })
   const [weights, setWeights] = useState<
