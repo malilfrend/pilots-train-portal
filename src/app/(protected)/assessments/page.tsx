@@ -12,18 +12,8 @@ import {
   ASSESSMENT_TYPES,
   ASSESSMENT_TYPES_LABELS,
 } from '@/types/assessment'
-
-// Обновленный тип для пилота, соответствующий данным из БД
-interface Pilot {
-  id: number
-  profileId: number
-  profile: {
-    id: number
-    firstName: string
-    lastName: string
-    position?: string
-  }
-}
+import { TPilot } from '@/types/pilots'
+import { INITIAL_COMPETENCY_SCORES } from '@/constants/initials-competency'
 
 // Интерфейс для запроса на создание/обновление оценки
 interface SaveAssessmentRequest {
@@ -48,8 +38,8 @@ const defaultWeights: Record<AssessmentSourceType, number> = {
 export default function AssessmentsPage() {
   const { user } = useAuth()
   const router = useRouter()
-  const [pilots, setPilots] = useState<Pilot[]>([])
-  const [selectedPilot, setSelectedPilot] = useState<Pilot | null>(null)
+  const [pilots, setPilots] = useState<TPilot[]>([])
+  const [selectedPilot, setSelectedPilot] = useState<TPilot | null>(null)
   const [pilotAssessments, setPilotAssessments] = useState<
     Record<AssessmentSourceType, Assessment | null>
   >({
@@ -61,50 +51,10 @@ export default function AssessmentsPage() {
   const [scores, setScores] = useState<
     Record<AssessmentSourceType, Record<CompetencyCode, number | null>>
   >({
-    PC: {
-      PRO: null,
-      COM: null,
-      FPA: null,
-      FPM: null,
-      LTW: null,
-      PSD: null,
-      SAW: null,
-      WLM: null,
-      KNO: null,
-    },
-    FDM: {
-      PRO: null,
-      COM: null,
-      FPA: null,
-      FPM: null,
-      LTW: null,
-      PSD: null,
-      SAW: null,
-      WLM: null,
-      KNO: null,
-    },
-    EVAL: {
-      PRO: null,
-      COM: null,
-      FPA: null,
-      FPM: null,
-      LTW: null,
-      PSD: null,
-      SAW: null,
-      WLM: null,
-      KNO: null,
-    },
-    ASR: {
-      PRO: null,
-      COM: null,
-      FPA: null,
-      FPM: null,
-      LTW: null,
-      PSD: null,
-      SAW: null,
-      WLM: null,
-      KNO: null,
-    },
+    PC: INITIAL_COMPETENCY_SCORES,
+    FDM: INITIAL_COMPETENCY_SCORES,
+    EVAL: INITIAL_COMPETENCY_SCORES,
+    ASR: INITIAL_COMPETENCY_SCORES,
   })
   const [weights, setWeights] = useState<
     Record<CompetencyCode, Record<AssessmentSourceType, number>>
@@ -149,50 +99,10 @@ export default function AssessmentsPage() {
     if (pilotAssessments) {
       // Создаем структуру для оценок всех типов
       const allScores: Record<AssessmentSourceType, Record<CompetencyCode, number | null>> = {
-        PC: {
-          PRO: null,
-          COM: null,
-          FPA: null,
-          FPM: null,
-          LTW: null,
-          PSD: null,
-          SAW: null,
-          WLM: null,
-          KNO: null,
-        },
-        FDM: {
-          PRO: null,
-          COM: null,
-          FPA: null,
-          FPM: null,
-          LTW: null,
-          PSD: null,
-          SAW: null,
-          WLM: null,
-          KNO: null,
-        },
-        EVAL: {
-          PRO: null,
-          COM: null,
-          FPA: null,
-          FPM: null,
-          LTW: null,
-          PSD: null,
-          SAW: null,
-          WLM: null,
-          KNO: null,
-        },
-        ASR: {
-          PRO: null,
-          COM: null,
-          FPA: null,
-          FPM: null,
-          LTW: null,
-          PSD: null,
-          SAW: null,
-          WLM: null,
-          KNO: null,
-        },
+        PC: INITIAL_COMPETENCY_SCORES,
+        FDM: INITIAL_COMPETENCY_SCORES,
+        EVAL: INITIAL_COMPETENCY_SCORES,
+        ASR: INITIAL_COMPETENCY_SCORES,
       }
 
       // Заполняем данными из загруженных оценок

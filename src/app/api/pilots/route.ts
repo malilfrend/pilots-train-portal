@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyToken } from '@/lib/auth'
 import prisma from '@/lib/prisma'
+import { TPilot } from '@/types/pilots'
+
+type Response = {
+  pilots: Array<TPilot>
+}
 
 export async function GET() {
   try {
@@ -49,7 +54,20 @@ export async function GET() {
       },
     })
 
-    return NextResponse.json({ pilots })
+    const response: Response = {
+      pilots: pilots.map((pilot) => ({
+        id: pilot.id,
+        profileId: pilot.profileId,
+        profile: {
+          id: pilot.profile.id,
+          firstName: pilot.profile.firstName,
+          lastName: pilot.profile.lastName,
+          position: pilot.profile.position || undefined,
+        },
+      })),
+    }
+
+    return NextResponse.json(response)
   } catch (error) {
     console.error('Error fetching pilots:', error)
     return NextResponse.json({ error: 'Внутренняя ошибка сервера' }, { status: 500 })

@@ -31,7 +31,6 @@ enum CompetencyCode {
   PSD           // Problem Solving and Decision
   SAW           // Situational Awareness
   WLM           // Workload Management
-  KNO           // Knowledge
 }
 
 // Базовый профиль пользователя
@@ -80,7 +79,7 @@ model Instructor {
 // Веса компетенций для разных источников
 model CompetencyWeight {
   id              Int               @id @default(autoincrement())
-  competencyCode  CompetencyCode    // Код компетенции (KNO, PRO, и т.д.)
+  competencyCode  CompetencyCode    // Код компетенции (SLW, PRO, и т.д.)
   sourceType      AssessmentSourceType // Тип источника (KP, PADP, EVAL, AS)
   weight          Float             // Вес источника для данной компетенции (0.35, 0.1, и т.д.)
   createdAt       DateTime          @default(now())
@@ -105,4 +104,33 @@ model PilotCompetencyScore {
   updatedAt       DateTime            @updatedAt
 
   @@unique([pilotId, competencyCode, sourceType]) // Уникальное сочетание пилота, компетенции и источника
+}
+
+// Упражнение со связкой с компетенциями
+model Exercise {
+  /// Авто‑инкрементный уникальный идентификатор упражнения
+  id          Int                       @id @default(autoincrement())
+
+  /// Название упражнения
+  name        String
+
+  /// Связь с компетенциями, которые развивает это упражнение
+  competencies ExerciseCompetency[]
+
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+}
+
+/// Таблица‑связка для many‑to‑many между Exercise и enum’ом CompetencyCode
+model ExerciseCompetency {
+  exercise        Exercise             @relation(fields: [exerciseId], references: [id])
+  exerciseId      Int
+
+  /// Одна из компетенций из enum CompetencyCode
+  competencyCode  CompetencyCode
+
+  /// Композитный первичный ключ, чтобы одна и та же пара не дублировалась
+  @@id([exerciseId, competencyCode])
+  /// Индекс для ускорения выборок по компетенции (опционально)
+  @@index([competencyCode])
 }

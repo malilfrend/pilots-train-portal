@@ -65,7 +65,6 @@ export async function GET() {
       'PSD',
       'SAW',
       'WLM',
-      'KNO',
     ]
     const generalScores = competencyCodes.map((code) => {
       const scores = allCompetencyScores.filter((s) => s.competencyCode === code)

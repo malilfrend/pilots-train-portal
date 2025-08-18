@@ -11,6 +11,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
     "db:migrate:dev": "dotenv -e .env.development -- npx prisma migrate dev",
     "db:migrate:prod": "dotenv -e .env -- npx prisma migrate dev",
+    "db:studio:dev": "dotenv -e .env.development -- npx prisma studio",
     "db:reset:dev": "dotenv -e .env.development -- npx prisma migrate reset",
     "db:reset:prod": "dotenv -e .env -- npx prisma migrate reset",
     "prepare": "husky",
@@ -40,6 +41,7 @@
     "react-hook-form": "^7.55.0",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
+    "xlsx": "^0.18.5",
     "zod": "^3.24.2"
   },
   "devDependencies": {
