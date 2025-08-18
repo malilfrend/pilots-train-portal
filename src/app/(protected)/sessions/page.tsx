@@ -9,6 +9,10 @@ import { TExercise } from '@/types/exercises'
 import { TPilot } from '@/types/pilots'
 import { Button } from '@/components/ui/button'
 import { PilotsList } from '@/components/features/instructor/PilotsList'
+import { TPilotAverage } from '@/app/api/average-assessments/route'
+import { COMPETENCIES, CompetencyCode } from '@/types/assessment'
+import { AverageAssessmentsTable } from '@/components/features/profile/AverageAssessmentsTable'
+import { INITIAL_COMPETENCY_SCORES } from '@/constants/initials-competency'
 
 export default function SessionsPage() {
   const { user } = useAuth()
@@ -21,6 +25,12 @@ export default function SessionsPage() {
 
   const [exercises, setExercises] = useState<TExercise[] | null>(null)
   const [exercisesError, setExercisesError] = useState<string | null>(null)
+
+  const [averageAssessments, setAverageAssessments] = useState<{
+    pilot1?: TPilotAverage
+    pilot2?: TPilotAverage
+  } | null>(null)
+  const [averageAssessmentsError, setAverageAssessmentsError] = useState<string | null>(null)
 
   const [pilotIdsMap, setPilotIdsMap] = useState<Record<string, boolean>>({})
 
@@ -94,6 +104,26 @@ export default function SessionsPage() {
     }
   }
 
+  const fetchAverageAssessments = async () => {
+    const pilotIds = Object.keys(pilotIdsMap)
+
+    const response = await fetch(
+      `/api/average-assessments?pilot1Id=${pilotIds[0]}&pilot2Id=${pilotIds[1]}`
+    )
+
+    if (!response.ok) {
+      throw new Error('Ошибка при загрузке средних оценок')
+    }
+
+    const data = await response.json()
+    setAverageAssessments(data.pilots)
+  }
+
+  const handleClickOnLoadExercises = () => {
+    fetchAverageAssessments()
+    fetchExercises()
+  }
+
   // Дополнительная проверка, что пользователь - инструктор
   useEffect(() => {
     if (user && user.role !== 'INSTRUCTOR') {
@@ -123,7 +153,11 @@ export default function SessionsPage() {
         </div>
 
         {!hasPilotsAndExercises && (
-          <Button disabled={isDisabledFetchExercises} onClick={fetchExercises} className="mb-4">
+          <Button
+            disabled={isDisabledFetchExercises}
+            onClick={handleClickOnLoadExercises}
+            className="mb-4"
+          >
             Загрузить упражнения
           </Button>
         )}
@@ -158,6 +192,24 @@ export default function SessionsPage() {
           <div className="mb-6">
             <PilotsList pilots={selectedPilotsArray} selectedPilotIds={pilotIdsMap} />
           </div>
+        )}
+
+        {!!averageAssessments && hasPilotsAndExercises && (
+          <AverageAssessmentsTable
+            pilotName={averageAssessments.pilot1?.pilotName || ''}
+            competencyAverages={
+              averageAssessments.pilot1?.competencyAverages || INITIAL_COMPETENCY_SCORES
+            }
+          />
+        )}
+
+        {!!averageAssessments && hasPilotsAndExercises && (
+          <AverageAssessmentsTable
+            pilotName={averageAssessments.pilot2?.pilotName || ''}
+            competencyAverages={
+              averageAssessments.pilot2?.competencyAverages || INITIAL_COMPETENCY_SCORES
+            }
+          />
         )}
 
         {!!exercises && <ExerciseList exercises={exercises} />}

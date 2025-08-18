@@ -13,6 +13,7 @@ import {
   ASSESSMENT_TYPES_LABELS,
 } from '@/types/assessment'
 import { TPilot } from '@/types/pilots'
+import { INITIAL_COMPETENCY_SCORES } from '@/constants/initials-competency'
 
 // Интерфейс для запроса на создание/обновление оценки
 interface SaveAssessmentRequest {
@@ -34,17 +35,6 @@ const defaultWeights: Record<AssessmentSourceType, number> = {
   ASR: 0.2,
 }
 
-const initialScores = {
-  PRO: null,
-  COM: null,
-  FPA: null,
-  FPM: null,
-  LTW: null,
-  PSD: null,
-  SAW: null,
-  WLM: null,
-}
-
 export default function AssessmentsPage() {
   const { user } = useAuth()
   const router = useRouter()
@@ -61,46 +51,10 @@ export default function AssessmentsPage() {
   const [scores, setScores] = useState<
     Record<AssessmentSourceType, Record<CompetencyCode, number | null>>
   >({
-    PC: {
-      PRO: null,
-      COM: null,
-      FPA: null,
-      FPM: null,
-      LTW: null,
-      PSD: null,
-      SAW: null,
-      WLM: null,
-    },
-    FDM: {
-      PRO: null,
-      COM: null,
-      FPA: null,
-      FPM: null,
-      LTW: null,
-      PSD: null,
-      SAW: null,
-      WLM: null,
-    },
-    EVAL: {
-      PRO: null,
-      COM: null,
-      FPA: null,
-      FPM: null,
-      LTW: null,
-      PSD: null,
-      SAW: null,
-      WLM: null,
-    },
-    ASR: {
-      PRO: null,
-      COM: null,
-      FPA: null,
-      FPM: null,
-      LTW: null,
-      PSD: null,
-      SAW: null,
-      WLM: null,
-    },
+    PC: INITIAL_COMPETENCY_SCORES,
+    FDM: INITIAL_COMPETENCY_SCORES,
+    EVAL: INITIAL_COMPETENCY_SCORES,
+    ASR: INITIAL_COMPETENCY_SCORES,
   })
   const [weights, setWeights] = useState<
     Record<CompetencyCode, Record<AssessmentSourceType, number>>
@@ -145,10 +99,10 @@ export default function AssessmentsPage() {
     if (pilotAssessments) {
       // Создаем структуру для оценок всех типов
       const allScores: Record<AssessmentSourceType, Record<CompetencyCode, number | null>> = {
-        PC: initialScores,
-        FDM: initialScores,
-        EVAL: initialScores,
-        ASR: initialScores,
+        PC: INITIAL_COMPETENCY_SCORES,
+        FDM: INITIAL_COMPETENCY_SCORES,
+        EVAL: INITIAL_COMPETENCY_SCORES,
+        ASR: INITIAL_COMPETENCY_SCORES,
       }
 
       // Заполняем данными из загруженных оценок

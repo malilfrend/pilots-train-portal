@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { CompetencyCode, AssessmentSourceType, ASSESSMENT_TYPES } from '@/types/assessment'
 
-interface PilotAverage {
+export type TPilotAverage = {
   pilotId: number
   pilotName: string
   competencyAverages: Record<CompetencyCode, number | null>
@@ -10,8 +10,8 @@ interface PilotAverage {
 
 type Response = {
   pilots?: {
-    pilot1?: PilotAverage
-    pilot2?: PilotAverage
+    pilot1?: TPilotAverage
+    pilot2?: TPilotAverage
   }
 }
 
@@ -73,7 +73,7 @@ function calculateWeightedAverage(
 async function getPilotAverages(
   pilotId: number,
   weights: Record<CompetencyCode, Record<AssessmentSourceType, number>>
-): Promise<PilotAverage> {
+): Promise<TPilotAverage> {
   // Получаем информацию о пилоте
   const pilot = await prisma.pilot.findUnique({
     where: { id: pilotId },
@@ -172,7 +172,7 @@ export async function GET(request: Request) {
     const weights = await loadCompetencyWeights()
 
     // Получаем средние оценки пилотов, если их id переданы
-    const pilots: { pilot1?: PilotAverage; pilot2?: PilotAverage } = {}
+    const pilots: { pilot1?: TPilotAverage; pilot2?: TPilotAverage } = {}
 
     if (pilot1Id) {
       try {

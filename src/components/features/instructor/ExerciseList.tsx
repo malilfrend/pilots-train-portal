@@ -23,13 +23,16 @@ export function ExerciseList({ exercises }: TProps) {
 
   return (
     <div className="space-y-4">
-      {exercises.map((exercise) => (
+      {exercises.map((exercise, idx) => (
         <div
           key={exercise.id}
           className="bg-white p-6 rounded-lg shadow border hover:shadow-md transition-shadow"
         >
           <div className="flex justify-between items-start mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">{exercise.name}</h3>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400 font-mono">#{idx + 1}</span>
+              <h3 className="text-lg font-semibold text-gray-900">{exercise.name}</h3>
+            </div>
             <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
               ID: {exercise.id}
             </span>
