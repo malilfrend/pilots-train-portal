@@ -27,27 +27,16 @@ interface SaveAssessmentRequest {
   comment?: string
 }
 
-// Веса для источников оценок - будут использоваться если не загружены с сервера
-const defaultWeights: Record<AssessmentSourceType, number> = {
-  PC: 0.35,
-  FDM: 0.15,
-  EVAL: 0.3,
-  ASR: 0.2,
-}
-
 export default function AssessmentsPage() {
   const { user } = useAuth()
   const router = useRouter()
   const [pilots, setPilots] = useState<TPilot[]>([])
   const [selectedPilot, setSelectedPilot] = useState<TPilot | null>(null)
-  const [pilotAssessments, setPilotAssessments] = useState<
-    Record<AssessmentSourceType, Assessment | null>
-  >({
-    PC: null,
-    FDM: null,
-    EVAL: null,
-    ASR: null,
-  })
+  const [pilotAssessments, setPilotAssessments] = useState<Record<
+    AssessmentSourceType,
+    Assessment | null
+  > | null>(null)
+
   const [scores, setScores] = useState<
     Record<AssessmentSourceType, Record<CompetencyCode, number | null>>
   >({
@@ -56,97 +45,23 @@ export default function AssessmentsPage() {
     EVAL: INITIAL_COMPETENCY_SCORES,
     ASR: INITIAL_COMPETENCY_SCORES,
   })
-  const [weights, setWeights] = useState<
-    Record<CompetencyCode, Record<AssessmentSourceType, number>>
-  >({} as Record<CompetencyCode, Record<AssessmentSourceType, number>>)
+
   const [comments, setComments] = useState<Record<AssessmentSourceType, string>>({
     PC: '',
     FDM: '',
     EVAL: '',
     ASR: '',
   })
+
+  const [weights, setWeights] = useState<
+    Record<CompetencyCode, Record<AssessmentSourceType, number>>
+  >({} as Record<CompetencyCode, Record<AssessmentSourceType, number>>)
+
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-
-  // Дополнительная проверка, что пользователь - инструктор
-  useEffect(() => {
-    if (user && user.role !== 'INSTRUCTOR') {
-      router.push('/')
-    }
-  }, [user, router])
-
-  // Загрузка списка всех пилотов
-  useEffect(() => {
-    if (user && user.role === 'INSTRUCTOR') {
-      fetchPilots()
-      fetchWeights()
-    }
-  }, [user])
-
-  // Загрузка оценок выбранного пилота
-  useEffect(() => {
-    if (selectedPilot) {
-      fetchPilotAssessments(selectedPilot.id)
-    }
-  }, [selectedPilot])
-
-  // Загрузка данных выбранной оценки для редактирования
-  useEffect(() => {
-    // Если есть данные, заполняем все формы одновременно
-    if (pilotAssessments) {
-      // Создаем структуру для оценок всех типов
-      const allScores: Record<AssessmentSourceType, Record<CompetencyCode, number | null>> = {
-        PC: INITIAL_COMPETENCY_SCORES,
-        FDM: INITIAL_COMPETENCY_SCORES,
-        EVAL: INITIAL_COMPETENCY_SCORES,
-        ASR: INITIAL_COMPETENCY_SCORES,
-      }
-
-      // Заполняем данными из загруженных оценок
-      let hasAnyAssessment = false
-      ASSESSMENT_TYPES.forEach((type) => {
-        const assessment = pilotAssessments[type]
-        if (assessment) {
-          hasAnyAssessment = true
-          assessment.competencyScores.forEach((score) => {
-            if (allScores[type]) {
-              allScores[type][score.competencyCode] = score.score
-            }
-          })
-        }
-      })
-
-      setScores(allScores)
-
-      Object.entries(pilotAssessments).forEach(([type, assessment]) => {
-        if (assessment) {
-          setComments((prev) => ({ ...prev, [type]: assessment.instructorComment || '' }))
-        }
-      })
-
-      setIsEditing(hasAnyAssessment)
-    }
-  }, [pilotAssessments])
-
-  // Загрузка весов компетенций
-  const fetchWeights = async () => {
-    try {
-      const response = await fetch('/api/competency-weights')
-
-      if (!response.ok) {
-        console.error('Ошибка при загрузке весов компетенций')
-        return
-      }
-
-      const data = await response.json()
-      setWeights(data.weights)
-    } catch (error) {
-      console.error('Ошибка при загрузке весов компетенций:', error)
-    }
-  }
 
   const fetchPilots = async () => {
     setIsLoading(true)
@@ -170,12 +85,11 @@ export default function AssessmentsPage() {
   const fetchPilotAssessments = async (pilotId: number) => {
     setIsLoading(true)
     try {
-      const response = await fetch(`/api/pilots/${pilotId}/assessments`, {
-        method: 'POST',
+      const response = await fetch(`/api/assessments?pilotId=${pilotId}`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ pilotId }),
       })
 
       if (!response.ok) {
@@ -197,6 +111,45 @@ export default function AssessmentsPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const fetchWeights = async () => {
+    try {
+      const response = await fetch('/api/competency-weights')
+
+      if (!response.ok) {
+        console.error('Ошибка при загрузке весов компетенций')
+        return
+      }
+
+      const data = await response.json()
+      setWeights(data.weights)
+    } catch (error) {
+      console.error('Ошибка при загрузке весов компетенций:', error)
+    }
+  }
+
+  // Получить вес для компетенции и источника
+  const getWeight = (competencyCode: CompetencyCode, sourceType: AssessmentSourceType): number => {
+    return weights[competencyCode]?.[sourceType] || 0
+  }
+
+  // Рассчитать средневзвешенное значение для компетенции
+  const calculateAverage = (competencyCode: CompetencyCode): number => {
+    let sum = 0
+    let totalWeight = 0
+
+    // Проходим по всем источникам
+    ASSESSMENT_TYPES.forEach((sourceType) => {
+      const score = getCurrentScore(sourceType, competencyCode)
+      if (score === null) return
+
+      const weight = getWeight(competencyCode, sourceType)
+      sum += score * weight
+      totalWeight += weight
+    })
+
+    return totalWeight > 0 ? Math.round((sum / totalWeight) * 10) / 10 : 0
   }
 
   const handleScoreChange = (
@@ -289,29 +242,6 @@ export default function AssessmentsPage() {
     }
   }
 
-  // Получить вес для компетенции и источника
-  const getWeight = (competencyCode: CompetencyCode, sourceType: AssessmentSourceType): number => {
-    return weights[competencyCode]?.[sourceType] || defaultWeights[sourceType] || 0
-  }
-
-  // Рассчитать средневзвешенное значение для компетенции
-  const calculateAverage = (competencyCode: CompetencyCode): string => {
-    let sum = 0
-    let totalWeight = 0
-
-    // Проходим по всем источникам
-    ASSESSMENT_TYPES.forEach((sourceType) => {
-      const score = getCurrentScore(sourceType, competencyCode)
-      if (score === null) return
-
-      const weight = getWeight(competencyCode, sourceType)
-      sum += score * weight
-      totalWeight += weight
-    })
-
-    return totalWeight > 0 ? (sum / totalWeight).toFixed(2) : '—'
-  }
-
   // Получить текущее значение оценки для отображения в таблице
   const getCurrentScore = (
     sourceType: AssessmentSourceType,
@@ -319,6 +249,63 @@ export default function AssessmentsPage() {
   ): number | null => {
     return scores[sourceType]?.[competencyCode] ?? null
   }
+
+  // Дополнительная проверка, что пользователь - инструктор
+  useEffect(() => {
+    if (user && user.role !== 'INSTRUCTOR') {
+      router.push('/')
+    }
+  }, [user, router])
+
+  // Загрузка списка всех пилотов
+  useEffect(() => {
+    if (user && user.role === 'INSTRUCTOR') {
+      fetchPilots()
+      fetchWeights()
+    }
+  }, [user])
+
+  // Загрузка оценок выбранного пилота
+  useEffect(() => {
+    if (selectedPilot) {
+      fetchPilotAssessments(selectedPilot.id)
+    }
+  }, [selectedPilot])
+
+  // Загрузка данных выбранной оценки для редактирования
+  useEffect(() => {
+    // Если есть данные, заполняем все формы одновременно
+    if (pilotAssessments) {
+      console.log('pilotAssessments :', pilotAssessments)
+      // Создаем структуру для оценок всех типов
+      const allScores: Record<AssessmentSourceType, Record<CompetencyCode, number | null>> = {
+        PC: INITIAL_COMPETENCY_SCORES,
+        FDM: INITIAL_COMPETENCY_SCORES,
+        EVAL: INITIAL_COMPETENCY_SCORES,
+        ASR: INITIAL_COMPETENCY_SCORES,
+      }
+
+      // Заполняем данными из загруженных оценок
+      let hasAnyAssessment = false
+      ASSESSMENT_TYPES.forEach((type) => {
+        const assessment = pilotAssessments[type]
+        if (assessment) {
+          hasAnyAssessment = true
+          allScores[type] = assessment.competencyScores
+        }
+      })
+
+      setScores(allScores)
+
+      Object.entries(pilotAssessments).forEach(([type, assessment]) => {
+        if (assessment) {
+          setComments((prev) => ({ ...prev, [type]: assessment.instructorComment || '' }))
+        }
+      })
+
+      setIsEditing(hasAnyAssessment)
+    }
+  }, [pilotAssessments])
 
   return (
     <ClientAuthGuard>
@@ -431,14 +418,7 @@ export default function AssessmentsPage() {
                                     <td className="border border-gray-300 px-4 py-2 text-center">
                                       <select
                                         className="border rounded p-1 w-full"
-                                        value={
-                                          getCurrentScore(sourceType, competencyCode) === null
-                                            ? ''
-                                            : getCurrentScore(
-                                                sourceType,
-                                                competencyCode
-                                              )?.toString()
-                                        }
+                                        value={getCurrentScore(sourceType, competencyCode) ?? ''}
                                         onChange={(e) =>
                                           handleScoreChange(
                                             sourceType,

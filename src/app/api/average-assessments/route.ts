@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { CompetencyCode, AssessmentSourceType, ASSESSMENT_TYPES } from '@/types/assessment'
+import { loadWeights } from '@/db-utils/load-weights'
 
 export type TPilotAverage = {
   pilotId: number
@@ -12,29 +13,6 @@ type Response = {
   pilots?: {
     pilot1?: TPilotAverage
     pilot2?: TPilotAverage
-  }
-}
-
-// Функция для загрузки весов компетенций
-async function loadCompetencyWeights(): Promise<
-  Record<CompetencyCode, Record<AssessmentSourceType, number>>
-> {
-  try {
-    const weights = await prisma.competencyWeight.findMany()
-
-    const weightMap = {} as Record<CompetencyCode, Record<AssessmentSourceType, number>>
-
-    weights.forEach((weight) => {
-      if (!weightMap[weight.competencyCode]) {
-        weightMap[weight.competencyCode] = {} as Record<AssessmentSourceType, number>
-      }
-      weightMap[weight.competencyCode][weight.sourceType] = weight.weight
-    })
-
-    return weightMap
-  } catch (error) {
-    console.error('Error loading competency weights:', error)
-    return {} as Record<CompetencyCode, Record<AssessmentSourceType, number>>
   }
 }
 
@@ -66,7 +44,7 @@ function calculateWeightedAverage(
     totalWeight += weight
   })
 
-  return totalWeight > 0 ? Math.round((sum / totalWeight) * 100) / 100 : null
+  return totalWeight > 0 ? Math.round((sum / totalWeight) * 10) / 10 : null
 }
 
 // Функция для получения средних оценок пилота по компетенциям
@@ -169,7 +147,7 @@ export async function GET(request: Request) {
     }
 
     // Загружаем веса компетенций
-    const weights = await loadCompetencyWeights()
+    const weights = await loadWeights()
 
     // Получаем средние оценки пилотов, если их id переданы
     const pilots: { pilot1?: TPilotAverage; pilot2?: TPilotAverage } = {}

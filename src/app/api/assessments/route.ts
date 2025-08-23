@@ -2,16 +2,15 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyToken } from '@/lib/auth'
 import { ASSESSMENT_TYPES, CompetencyCode } from '@/types/assessment'
-import {
-  getPilotByProfileId,
-  getPilotAssessments,
-  formatAssessments,
-  groupAssessmentsByType,
-} from '@/lib/assessments'
+import { getPilotAssessments, formatAssessments, groupAssessmentsByType } from '@/lib/assessments'
 import prisma from '@/lib/prisma'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+
+    const pilotId = Number(searchParams.get('pilotId') ?? 0)
+
     const cookieStore = await cookies()
     const token = cookieStore.get('token')?.value
 
@@ -24,28 +23,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Недействительный токен' }, { status: 401 })
     }
 
-    const userProfileId = payload.id as number
-    const roleType = payload.roleType as string
-
-    // Если пользователь - инструктор, возвращаем ошибку
-    if (roleType === 'INSTRUCTOR') {
-      return NextResponse.json(
-        {
-          error: 'Инструкторы не имеют оценок компетенций',
-        },
-        { status: 403 }
-      )
-    }
-
-    // Находим пилота по профилю пользователя
-    const pilot = await getPilotByProfileId(userProfileId)
-
-    if (!pilot) {
-      return NextResponse.json({ error: 'Пилот не найден' }, { status: 404 })
-    }
-
     // Получаем все оценки пилота с компетенциями
-    const assessments = await getPilotAssessments(pilot.id)
+    const assessments = await getPilotAssessments(pilotId)
 
     // Преобразуем данные для фронтенда
     const formattedAssessments = formatAssessments(assessments)
@@ -66,27 +45,22 @@ export async function GET() {
       'SAW',
       'WLM',
     ]
-    const generalScores = competencyCodes.map((code) => {
-      const scores = allCompetencyScores.filter((s) => s.competencyCode === code)
-      const avgScore =
-        scores.length > 0 ? scores.reduce((sum, s) => sum + s.score, 0) / scores.length : null
 
-      return {
-        competencyCode: code,
-        score: avgScore,
-      }
-    })
+    const generalScores = Object.fromEntries(
+      competencyCodes.map((code) => {
+        const scores = allCompetencyScores.filter((s) => s.competencyCode === code)
+        const avgScore =
+          scores.length > 0
+            ? Math.round((scores.reduce((sum, s) => sum + s.score, 0) / scores.length) * 10) / 10
+            : null
 
-    const generalAssessment = {
-      id: 'general',
-      type: 'EVAL',
-      date: new Date().toISOString(),
-      competencyScores: generalScores,
-    }
+        return [code, avgScore]
+      })
+    )
 
     return NextResponse.json({
       assessments: assessmentsByType,
-      generalAssessment,
+      generalAssessment: generalScores,
     })
   } catch (error) {
     console.error('Error fetching assessments:', error)
