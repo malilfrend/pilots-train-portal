@@ -3,7 +3,11 @@ import prisma from '@/lib/prisma'
 import { TExercise } from '@/types/exercises'
 import { AssessmentSourceType, CompetencyCode } from '@prisma/client'
 
-type Response = { exercises: Array<TExercise> }
+type TPilotId = number
+
+export type TDevelopment = Record<CompetencyCode, number>
+export type TDevelopments = Record<TPilotId, TDevelopment>
+type TResponse = { exercises: Array<TExercise>; developments?: TDevelopments }
 
 const ALL_CODES: CompetencyCode[] = ['PRO', 'COM', 'FPA', 'FPM', 'LTW', 'PSD', 'SAW', 'WLM']
 
@@ -93,19 +97,32 @@ function expectedGainForExercise(
   return Math.round(total * 1000) / 1000
 }
 
-function applyExercise(
+function applyExerciseAndTrack(
   competencyCodes: CompetencyCode[],
   deficits: Map<TPairKey, number>,
-  d: number
+  d: number,
+  pilots: number[],
+  track: TDevelopments
 ) {
   for (const [key, value] of deficits) {
     if (value <= 0) {
       continue
     }
 
-    const code = key.split(':')[1] as CompetencyCode
+    const [pIdxStr, codeStr] = key.split(':')
+    const pIdx = Number(pIdxStr)
+    const code = codeStr as CompetencyCode
 
     if (competencyCodes.includes(code)) {
+      const inc = Math.min(value, d)
+      const pilotId = pilots[pIdx]
+
+      if (pilotId != null) {
+        track[pilotId] ||= {} as TDevelopment
+        const prev = track[pilotId][code] ?? 0
+        track[pilotId][code] = Math.round((prev + inc) * 1000) / 1000
+      }
+
       deficits.set(key, Math.max(0, Math.round((value - d) * 1000) / 1000))
     }
   }
@@ -185,7 +202,7 @@ export async function GET(request: Request) {
 
     // Нет пилотов — отдаём упражнения как есть
     if (!pilot1Id && !pilot2Id) {
-      return NextResponse.json({ exercises: allExercises } as Response)
+      return NextResponse.json({ exercises: allExercises } as TResponse)
     }
 
     const weights = await loadWeights()
@@ -216,6 +233,7 @@ export async function GET(request: Request) {
     // Итеративный отбор на limit слотов
     const selectedExercises: TExercise[] = []
     const usedExerciseIds = new Set<number>()
+    const developments: TDevelopments = {}
 
     while (selectedExercises.length < limit) {
       // L — пары с дефицитом > 0
@@ -279,8 +297,7 @@ export async function GET(request: Request) {
 
       selectedExercises.push(candidate)
       usedExerciseIds.add(candidate.id)
-
-      applyExercise(candidate.competencies, deficits, d)
+      applyExerciseAndTrack(candidate.competencies, deficits, d, pilots, developments)
     }
 
     // Добор до лимита (если остались места)
@@ -295,7 +312,7 @@ export async function GET(request: Request) {
       }
     }
 
-    return NextResponse.json({ exercises: selectedExercises } as Response)
+    return NextResponse.json({ exercises: selectedExercises, developments } as TResponse)
   } catch (error) {
     console.error('Error fetching exercises:', error)
     return NextResponse.json({ error: 'Внутренняя ошибка сервера' }, { status: 500 })

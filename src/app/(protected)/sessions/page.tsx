@@ -14,6 +14,7 @@ import { AverageAssessmentsTable } from '@/components/features/profile/AverageAs
 import { INITIAL_COMPETENCY_SCORES } from '@/constants/initials-competency'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { TDevelopments } from '@/app/api/exercises/route'
 
 export default function SessionsPage() {
   const { user } = useAuth()
@@ -26,27 +27,29 @@ export default function SessionsPage() {
 
   const [exercises, setExercises] = useState<TExercise[] | null>(null)
 
+  const [developments, setDevelopments] = useState<TDevelopments | null>(null)
+
   const [averageAssessments, setAverageAssessments] = useState<{
     pilot1?: TPilotAverage
     pilot2?: TPilotAverage
   } | null>(null)
 
-  const [pilotIdsMap, setPilotIdsMap] = useState<Record<string, boolean>>({})
+  const [selectedPilotIdsMap, setSelectedPilotIdsMap] = useState<Record<string, boolean>>({})
   const [R, setR] = useState<number>(3.5)
   const [d, setD] = useState<number>(0.1)
 
-  const isDisabledFetchExercises = Object.values(pilotIdsMap).length < 2
+  const isDisabledFetchExercises = Object.values(selectedPilotIdsMap).length < 2
 
   const hasPilotsAndExercises = !!exercises && pilots.length > 0
 
   const selectedPilotsArray = useMemo(
-    () => pilots.filter((pilot) => pilotIdsMap[pilot.id]),
-    [pilots, pilotIdsMap]
+    () => pilots.filter((pilot) => selectedPilotIdsMap[pilot.id]),
+    [pilots, selectedPilotIdsMap]
   )
 
   const handleSelectPilot = (pilotId: number) => {
-    if (pilotIdsMap[pilotId]) {
-      setPilotIdsMap((prev) => {
+    if (selectedPilotIdsMap[pilotId]) {
+      setSelectedPilotIdsMap((prev) => {
         const newMap = { ...prev }
         delete newMap[pilotId]
         return newMap
@@ -55,18 +58,18 @@ export default function SessionsPage() {
       return
     }
 
-    setPilotIdsMap((prev) => ({ ...prev, [pilotId]: true }))
+    setSelectedPilotIdsMap((prev) => ({ ...prev, [pilotId]: true }))
   }
 
   const handleChooseOtherPilots = () => {
-    setPilotIdsMap({})
+    setSelectedPilotIdsMap({})
     setExercises(null)
   }
 
   const fetchExercises = async () => {
     setIsLoading(true)
 
-    const pilotIds = Object.keys(pilotIdsMap)
+    const pilotIds = Object.keys(selectedPilotIdsMap)
 
     try {
       const response = await fetch(
@@ -79,6 +82,7 @@ export default function SessionsPage() {
 
       const data = await response.json()
       setExercises(data.exercises)
+      setDevelopments(data.developments)
     } catch (error) {
       console.error('Ошибка при загрузке упражнений:', error)
     } finally {
@@ -106,7 +110,7 @@ export default function SessionsPage() {
   }
 
   const fetchAverageAssessments = async () => {
-    const pilotIds = Object.keys(pilotIdsMap)
+    const pilotIds = Object.keys(selectedPilotIdsMap)
 
     const response = await fetch(
       `/api/average-assessments?pilot1Id=${pilotIds[0]}&pilot2Id=${pilotIds[1]}`
@@ -217,13 +221,13 @@ export default function SessionsPage() {
           <PilotsList
             pilots={pilots}
             onSelectPilot={handleSelectPilot}
-            selectedPilotIds={pilotIdsMap}
+            selectedPilotIds={selectedPilotIdsMap}
           />
         )}
 
         {hasPilotsAndExercises && (
           <div className="mb-6">
-            <PilotsList pilots={selectedPilotsArray} selectedPilotIds={pilotIdsMap} />
+            <PilotsList pilots={selectedPilotsArray} selectedPilotIds={selectedPilotIdsMap} />
           </div>
         )}
 
@@ -233,6 +237,7 @@ export default function SessionsPage() {
             competencyAverages={
               averageAssessments.pilot1?.competencyAverages || INITIAL_COMPETENCY_SCORES
             }
+            development={developments?.[selectedPilotsArray[0].id]}
           />
         )}
 
@@ -242,6 +247,7 @@ export default function SessionsPage() {
             competencyAverages={
               averageAssessments.pilot2?.competencyAverages || INITIAL_COMPETENCY_SCORES
             }
+            development={developments?.[selectedPilotsArray[1].id]}
           />
         )}
 
