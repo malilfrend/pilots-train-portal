@@ -10,9 +10,10 @@ import { TPilot } from '@/types/pilots'
 import { Button } from '@/components/ui/button'
 import { PilotsList } from '@/components/features/instructor/PilotsList'
 import { TPilotAverage } from '@/app/api/average-assessments/route'
-import { COMPETENCIES, CompetencyCode } from '@/types/assessment'
 import { AverageAssessmentsTable } from '@/components/features/profile/AverageAssessmentsTable'
 import { INITIAL_COMPETENCY_SCORES } from '@/constants/initials-competency'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 export default function SessionsPage() {
   const { user } = useAuth()
@@ -24,15 +25,15 @@ export default function SessionsPage() {
   const [pilotsError, setPilotsError] = useState('')
 
   const [exercises, setExercises] = useState<TExercise[] | null>(null)
-  const [exercisesError, setExercisesError] = useState<string | null>(null)
 
   const [averageAssessments, setAverageAssessments] = useState<{
     pilot1?: TPilotAverage
     pilot2?: TPilotAverage
   } | null>(null)
-  const [averageAssessmentsError, setAverageAssessmentsError] = useState<string | null>(null)
 
   const [pilotIdsMap, setPilotIdsMap] = useState<Record<string, boolean>>({})
+  const [R, setR] = useState<number>(3.5)
+  const [d, setD] = useState<number>(0.1)
 
   const isDisabledFetchExercises = Object.values(pilotIdsMap).length < 2
 
@@ -64,12 +65,13 @@ export default function SessionsPage() {
 
   const fetchExercises = async () => {
     setIsLoading(true)
-    setExercisesError(null)
 
     const pilotIds = Object.keys(pilotIdsMap)
 
     try {
-      const response = await fetch(`/api/exercises?pilot1Id=${pilotIds[0]}&pilot2Id=${pilotIds[1]}`)
+      const response = await fetch(
+        `/api/exercises?pilot1Id=${pilotIds[0]}&pilot2Id=${pilotIds[1]}&R=${R}&d=${d}`
+      )
 
       if (!response.ok) {
         throw new Error('Ошибка при загрузке упражнений')
@@ -79,7 +81,6 @@ export default function SessionsPage() {
       setExercises(data.exercises)
     } catch (error) {
       console.error('Ошибка при загрузке упражнений:', error)
-      setExercisesError(error instanceof Error ? error.message : 'Неизвестная ошибка')
     } finally {
       setIsLoading(false)
     }
@@ -124,6 +125,14 @@ export default function SessionsPage() {
     fetchExercises()
   }
 
+  const handleChangeR = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setR(Number(e.target.value))
+  }
+
+  const handleChangeD = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setD(Number(e.target.value))
+  }
+
   // Дополнительная проверка, что пользователь - инструктор
   useEffect(() => {
     if (user && user.role !== 'INSTRUCTOR') {
@@ -152,21 +161,45 @@ export default function SessionsPage() {
           </p>
         </div>
 
-        {!hasPilotsAndExercises && (
-          <Button
-            disabled={isDisabledFetchExercises}
-            onClick={handleClickOnLoadExercises}
-            className="mb-4"
-          >
-            Загрузить упражнения
-          </Button>
-        )}
+        <div className="mb-6 flex gap-4">
+          {!hasPilotsAndExercises && (
+            <Button disabled={isDisabledFetchExercises} onClick={handleClickOnLoadExercises}>
+              Загрузить упражнения
+            </Button>
+          )}
 
-        {hasPilotsAndExercises && (
-          <Button onClick={handleChooseOtherPilots} className="mb-4">
-            Выбрать других пилотов
-          </Button>
-        )}
+          {hasPilotsAndExercises && (
+            <Button onClick={handleChooseOtherPilots}>Выбрать других пилотов</Button>
+          )}
+
+          <div className="flex items-center gap-2">
+            <Label htmlFor="R">R</Label>
+            <Input
+              min={0}
+              max={5}
+              step={0.1}
+              type="number"
+              id="R"
+              placeholder="R"
+              value={R}
+              onChange={handleChangeR}
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Label htmlFor="d">d</Label>
+            <Input
+              type="number"
+              min={0}
+              step={0.1}
+              max={1}
+              id="d"
+              placeholder="d"
+              value={d}
+              onChange={handleChangeD}
+            />
+          </div>
+        </div>
 
         {!hasPilotsAndExercises && (
           <div className="mb-6">

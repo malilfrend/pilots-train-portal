@@ -12,6 +12,7 @@
     "db:migrate:dev": "dotenv -e .env.development -- npx prisma migrate dev",
     "db:migrate:prod": "dotenv -e .env -- npx prisma migrate dev",
     "db:studio:dev": "dotenv -e .env.development -- npx prisma studio",
+    "db:studio:prod": "dotenv -e .env -- npx prisma studio",
     "db:reset:dev": "dotenv -e .env.development -- npx prisma migrate reset",
     "db:reset:prod": "dotenv -e .env -- npx prisma migrate reset",
     "prepare": "husky",

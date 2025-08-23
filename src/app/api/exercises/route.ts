@@ -91,7 +91,7 @@ export async function GET(request: Request) {
     const pilot1Id = searchParams.get('pilot1Id')
     const pilot2Id = searchParams.get('pilot2Id')
     const limit = Math.max(1, Number(searchParams.get('limit') ?? '24'))
-    const R = Number(searchParams.get('r') ?? '3.5')
+    const R = Number(searchParams.get('R') ?? '3.5')
     const d = Number(searchParams.get('d') ?? '0.1')
 
     if (pilot1Id && isNaN(Number(pilot1Id))) {
@@ -124,8 +124,12 @@ export async function GET(request: Request) {
 
     const pilots: Array<number> = []
 
-    if (pilot1Id) pilots.push(Number(pilot1Id))
-    if (pilot2Id) pilots.push(Number(pilot2Id))
+    if (pilot1Id) {
+      pilots.push(Number(pilot1Id))
+    }
+    if (pilot2Id) {
+      pilots.push(Number(pilot2Id))
+    }
 
     for (let p = 0; p < pilots.length; p++) {
       const avg = await getPilotAverages(pilots[p], weights)
