@@ -14,8 +14,8 @@ export const AverageAssessmentsTable = ({ pilotName, competencyAverages }: TProp
         <table className="min-w-full border-collapse border border-gray-300">
           <thead>
             <tr className="bg-gray-100">
-              <th className="border border-gray-300 px-4 py-2 text-left">Оценка компетенций</th>
-              <th className="border border-gray-300 px-4 py-2 text-center">Итоговая оценка</th>
+              <th className="border border-gray-300 px-4 py-2 text-left">Компетенция</th>
+              <th className="border border-gray-300 px-4 py-2 text-center">Средняя оценка</th>
             </tr>
           </thead>
           <tbody>
