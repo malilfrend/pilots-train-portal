@@ -36,7 +36,7 @@ export function ProfileAssessments() {
         setLoading(true)
 
         // Получаем оценки
-        const assessmentsResponse = await fetch('/api/assessments')
+        const assessmentsResponse = await fetch(`/api/assessments?pilotId=${user?.pilotId}`)
         if (!assessmentsResponse.ok) {
           throw new Error('Не удалось загрузить данные оценок')
         }
@@ -97,10 +97,7 @@ export function ProfileAssessments() {
     sourceType: AssessmentSourceType,
     competencyCode: CompetencyCode
   ): number | null => {
-    return (
-      assessments[sourceType]?.competencyScores.find((cs) => cs.competencyCode === competencyCode)
-        ?.score ?? null
-    )
+    return assessments[sourceType]?.competencyScores[competencyCode] ?? null
   }
 
   return (

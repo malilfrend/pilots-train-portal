@@ -1,9 +1,9 @@
 import { TDevelopment } from '@/app/api/exercises/route'
-import { COMPETENCIES, CompetencyCode } from '@/types/assessment'
+import { COMPETENCIES, CompetencyCode, TAverageCompetencyScores } from '@/types/assessment'
 
 type TProps = {
   pilotName: string
-  competencyAverages: Record<CompetencyCode, number | null>
+  competencyAverages: TAverageCompetencyScores
   development?: TDevelopment
 }
 

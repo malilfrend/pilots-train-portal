@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { TExercise } from '@/types/exercises'
 import { AssessmentSourceType, CompetencyCode } from '@prisma/client'
+import { ASSESSMENT_TYPES } from '@/types/assessment'
+import { loadWeights } from '@/db-utils/load-weights'
 
 type TPilotId = number
 
@@ -18,19 +20,6 @@ const DEFAULT_WEIGHTS: Record<AssessmentSourceType, number> = {
   ASR: 0.2,
 }
 
-async function loadWeights(): Promise<
-  Record<CompetencyCode, Record<AssessmentSourceType, number>>
-> {
-  const rows = await prisma.competencyWeight.findMany()
-  const map: Record<CompetencyCode, Record<AssessmentSourceType, number>> = {} as any
-  for (const c of ALL_CODES) map[c] = { ...DEFAULT_WEIGHTS }
-  for (const r of rows) {
-    if (!map[r.competencyCode]) map[r.competencyCode] = { ...DEFAULT_WEIGHTS }
-    map[r.competencyCode][r.sourceType] = r.weight
-  }
-  return map
-}
-
 async function getPilotAverages(
   pilotId: number,
   weights: Record<CompetencyCode, Record<AssessmentSourceType, number>>
@@ -42,24 +31,27 @@ async function getPilotAverages(
 
   const byCode: Record<CompetencyCode, Partial<Record<AssessmentSourceType, number>>> = {} as any
   for (const r of rows) {
-    if (!byCode[r.competencyCode]) byCode[r.competencyCode] = {}
+    if (!byCode[r.competencyCode]) {
+      byCode[r.competencyCode] = {}
+    }
     byCode[r.competencyCode][r.sourceType] = r.score
   }
 
   const avg: Record<CompetencyCode, number | null> = {} as any
   for (const code of ALL_CODES) {
     const w = weights[code] || DEFAULT_WEIGHTS
-    let sum = 0,
-      sumW = 0
-    ;(['PC', 'FDM', 'EVAL', 'ASR'] as AssessmentSourceType[]).forEach((st) => {
-      const val = byCode[code]?.[st]
-      const ww = w[st] ?? DEFAULT_WEIGHTS[st]
+    let sum = 0
+    let sumW = 0
+
+    ASSESSMENT_TYPES.forEach((type) => {
+      const val = byCode[code]?.[type]
+      const ww = w[type] ?? DEFAULT_WEIGHTS[type]
       if (typeof val === 'number') {
         sum += val * ww
         sumW += ww
       }
     })
-    avg[code] = sumW > 0 ? Math.round((sum / sumW) * 100) / 100 : null
+    avg[code] = sumW > 0 ? Math.round((sum / sumW) * 10) / 10 : null
   }
   return avg
 }
@@ -120,7 +112,7 @@ function applyExerciseAndTrack(
       if (pilotId != null) {
         track[pilotId] ||= {} as TDevelopment
         const prev = track[pilotId][code] ?? 0
-        track[pilotId][code] = Math.round((prev + inc) * 1000) / 1000
+        track[pilotId][code] = Math.round((prev + inc) * 10) / 10
       }
 
       deficits.set(key, Math.max(0, Math.round((value - d) * 1000) / 1000))

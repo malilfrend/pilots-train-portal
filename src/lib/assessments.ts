@@ -70,10 +70,9 @@ export function formatAssessments(assessments: any[]) {
     date: assessment.date.toISOString(),
     instructorComment: assessment.instructorComment,
     instructorName: assessment.instructorName,
-    competencyScores: assessment.competencyScores.map((score: any) => ({
-      competencyCode: score.competencyCode,
-      score: score.score,
-    })),
+    competencyScores: Object.fromEntries(
+      assessment.competencyScores.map((score: any) => [score.competencyCode, score.score])
+    ),
   }))
 }
 

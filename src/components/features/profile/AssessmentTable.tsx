@@ -24,7 +24,7 @@ export function AssessmentTable({ title, assessment }: AssessmentTableProps) {
         <TableBody>
           {competencyCodes.map((code) => {
             const competency = COMPETENCIES[code]
-            const score = assessment?.competencyScores.find((s) => s.competencyCode === code)?.score
+            const score = assessment?.competencyScores[code]
 
             return (
               <TableRow key={code} className="border-b">
