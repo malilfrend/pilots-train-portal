@@ -94,28 +94,35 @@ function applyExerciseAndTrack(
   deficits: Map<TPairKey, number>,
   d: number,
   pilots: number[],
-  track: TDevelopments
+  track: TDevelopments,
+  currentScores: Map<TPairKey, number>
 ) {
-  for (const [key, value] of deficits) {
-    if (value <= 0) {
-      continue
-    }
+  // 1) Фиксируем прирост по всем компетенциям упражнения для каждого пилота
+  for (let pilotIndex = 0; pilotIndex < pilots.length; pilotIndex++) {
+    const pilotId = pilots[pilotIndex]
+    if (pilotId == null) continue
+    track[pilotId] ||= {} as TDevelopment
 
-    const [pIdxStr, codeStr] = key.split(':')
-    const pIdx = Number(pIdxStr)
-    const code = codeStr as CompetencyCode
+    for (const code of competencyCodes) {
+      const key = getPairKey(pilotIndex, code)
+      const currentDeficit = deficits.get(key) ?? 0
+      const currentScore = currentScores.get(key) ?? 5
+      // Базовый прирост: если есть дефицит — не больше его и d, иначе d (этап 2)
+      const baseIncrement = currentDeficit > 0 ? Math.min(currentDeficit, d) : d
+      // Потолок: не превышать 5 баллов
+      const headroom = Math.max(0, 5 - currentScore)
+      const increment = Math.min(baseIncrement, headroom)
 
-    if (competencyCodes.includes(code)) {
-      const inc = Math.min(value, d)
-      const pilotId = pilots[pIdx]
+      const prev = track[pilotId][code] ?? 0
+      track[pilotId][code] = Math.round((prev + increment) * 10) / 10
 
-      if (pilotId != null) {
-        track[pilotId] ||= {} as TDevelopment
-        const prev = track[pilotId][code] ?? 0
-        track[pilotId][code] = Math.round((prev + inc) * 10) / 10
+      // 2) Обновляем дефицит только если он был положительным
+      if (currentDeficit > 0) {
+        deficits.set(key, Math.max(0, Math.round((currentDeficit - increment) * 1000) / 1000))
       }
 
-      deficits.set(key, Math.max(0, Math.round((value - d) * 1000) / 1000))
+      // 3) Обновляем текущую оценку с учётом потолка 5
+      currentScores.set(key, Math.round((currentScore + increment) * 10) / 10)
     }
   }
 }
@@ -227,6 +234,16 @@ export async function GET(request: Request) {
     const usedExerciseIds = new Set<number>()
     const developments: TDevelopments = {}
 
+    // Текущие оценки для учёта потолка 5 баллов
+    const currentScores = new Map<TPairKey, number>()
+    for (let pilotIndex = 0; pilotIndex < pilots.length; pilotIndex++) {
+      const pilotAverages = await getPilotAverages(pilots[pilotIndex], await loadWeights())
+      for (const code of ALL_CODES) {
+        const avg = pilotAverages[code]
+        currentScores.set(getPairKey(pilotIndex, code), typeof avg === 'number' ? avg : 0)
+      }
+    }
+
     while (selectedExercises.length < limit) {
       // L — пары с дефицитом > 0
       const L = [...deficits.entries()].filter(([, val]) => val > 0)
@@ -289,7 +306,14 @@ export async function GET(request: Request) {
 
       selectedExercises.push(candidate)
       usedExerciseIds.add(candidate.id)
-      applyExerciseAndTrack(candidate.competencies, deficits, d, pilots, developments)
+      applyExerciseAndTrack(
+        candidate.competencies,
+        deficits,
+        d,
+        pilots,
+        developments,
+        currentScores
+      )
     }
 
     // Добор до лимита (если остались места)
@@ -300,6 +324,9 @@ export async function GET(request: Request) {
         }
         if (!usedExerciseIds.has(ex.id)) {
           selectedExercises.push(ex)
+          usedExerciseIds.add(ex.id)
+          // фиксируем прирост и для доборных упражнений
+          applyExerciseAndTrack(ex.competencies, deficits, d, pilots, developments, currentScores)
         }
       }
     }
