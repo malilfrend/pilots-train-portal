@@ -276,7 +276,6 @@ export default function AssessmentsPage() {
   useEffect(() => {
     // Если есть данные, заполняем все формы одновременно
     if (pilotAssessments) {
-      console.log('pilotAssessments :', pilotAssessments)
       // Создаем структуру для оценок всех типов
       const allScores: Record<AssessmentSourceType, Record<CompetencyCode, number | null>> = {
         PC: INITIAL_COMPETENCY_SCORES,
