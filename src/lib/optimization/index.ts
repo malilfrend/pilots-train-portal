@@ -110,7 +110,6 @@ export function optimizeBalancedCountsPowell(params: OptimizeParams): OptimizeRe
 }
 
 // ===== Оценка и бенчмаркинг решений этапа 2 =====
-
 export type OptimizationMetrics = {
   feasible: boolean
   sumZ: number

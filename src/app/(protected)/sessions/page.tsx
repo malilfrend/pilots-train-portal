@@ -238,6 +238,7 @@ export default function SessionsPage() {
               averageAssessments.pilot1?.competencyAverages || INITIAL_COMPETENCY_SCORES
             }
             development={developments?.[selectedPilotsArray[0].id]}
+            showTotal
           />
         )}
 
@@ -248,6 +249,7 @@ export default function SessionsPage() {
               averageAssessments.pilot2?.competencyAverages || INITIAL_COMPETENCY_SCORES
             }
             development={developments?.[selectedPilotsArray[1].id]}
+            showTotal
           />
         )}
 
