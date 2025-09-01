@@ -4,6 +4,7 @@ import { TExercise } from '@/types/exercises'
 import { AssessmentSourceType, CompetencyCode } from '@prisma/client'
 import { ASSESSMENT_TYPES } from '@/types/assessment'
 import { loadWeights } from '@/db-utils/load-weights'
+import { optimizeBalancedCountsPowell } from '@/lib/optimization'
 
 type TPilotId = number
 
@@ -29,7 +30,7 @@ async function getPilotAverages(
     select: { competencyCode: true, sourceType: true, score: true },
   })
 
-  const byCode: Record<CompetencyCode, Partial<Record<AssessmentSourceType, number>>> = {} as any
+  const byCode = {} as Record<CompetencyCode, Partial<Record<AssessmentSourceType, number>>>
   for (const r of rows) {
     if (!byCode[r.competencyCode]) {
       byCode[r.competencyCode] = {}
@@ -37,7 +38,7 @@ async function getPilotAverages(
     byCode[r.competencyCode][r.sourceType] = r.score
   }
 
-  const avg: Record<CompetencyCode, number | null> = {} as any
+  const avg: Record<CompetencyCode, number | null> = {} as Record<CompetencyCode, number | null>
   for (const code of ALL_CODES) {
     const w = weights[code] || DEFAULT_WEIGHTS
     let sum = 0
@@ -94,28 +95,35 @@ function applyExerciseAndTrack(
   deficits: Map<TPairKey, number>,
   d: number,
   pilots: number[],
-  track: TDevelopments
+  track: TDevelopments,
+  currentScores: Map<TPairKey, number>
 ) {
-  for (const [key, value] of deficits) {
-    if (value <= 0) {
-      continue
-    }
+  // 1) Фиксируем прирост по всем компетенциям упражнения для каждого пилота
+  for (let pilotIndex = 0; pilotIndex < pilots.length; pilotIndex++) {
+    const pilotId = pilots[pilotIndex]
+    if (pilotId == null) continue
+    track[pilotId] ||= {} as TDevelopment
 
-    const [pIdxStr, codeStr] = key.split(':')
-    const pIdx = Number(pIdxStr)
-    const code = codeStr as CompetencyCode
+    for (const code of competencyCodes) {
+      const key = getPairKey(pilotIndex, code)
+      const currentDeficit = deficits.get(key) ?? 0
+      const currentScore = currentScores.get(key) ?? 5
+      // Базовый прирост: если есть дефицит — не больше его и d, иначе d (этап 2)
+      const baseIncrement = currentDeficit > 0 ? Math.min(currentDeficit, d) : d
+      // Потолок: не превышать 5 баллов
+      const headroom = Math.max(0, 5 - currentScore)
+      const increment = Math.min(baseIncrement, headroom)
 
-    if (competencyCodes.includes(code)) {
-      const inc = Math.min(value, d)
-      const pilotId = pilots[pIdx]
+      const prev = track[pilotId][code] ?? 0
+      track[pilotId][code] = Math.round((prev + increment) * 10) / 10
 
-      if (pilotId != null) {
-        track[pilotId] ||= {} as TDevelopment
-        const prev = track[pilotId][code] ?? 0
-        track[pilotId][code] = Math.round((prev + inc) * 10) / 10
+      // 2) Обновляем дефицит только если он был положительным
+      if (currentDeficit > 0) {
+        deficits.set(key, Math.max(0, Math.round((currentDeficit - increment) * 1000) / 1000))
       }
 
-      deficits.set(key, Math.max(0, Math.round((value - d) * 1000) / 1000))
+      // 3) Обновляем текущую оценку с учётом потолка 5
+      currentScores.set(key, Math.round((currentScore + increment) * 10) / 10)
     }
   }
 }
@@ -151,7 +159,7 @@ const tryPickBestExercise = (
       (r.imp === bestRank.imp && r.cover > bestRank.cover) ||
       (r.imp === bestRank.imp &&
         r.cover === bestRank.cover &&
-        (bestExercise === null || exercise.name.localeCompare(bestExercise.name, 'en') < 0))
+        (bestExercise === null || exercise.id < bestExercise.id))
     ) {
       bestExercise = exercise
       bestRank = r
@@ -227,6 +235,16 @@ export async function GET(request: Request) {
     const usedExerciseIds = new Set<number>()
     const developments: TDevelopments = {}
 
+    // Текущие оценки для учёта потолка 5 баллов
+    const currentScores = new Map<TPairKey, number>()
+    for (let pilotIndex = 0; pilotIndex < pilots.length; pilotIndex++) {
+      const pilotAverages = await getPilotAverages(pilots[pilotIndex], await loadWeights())
+      for (const code of ALL_CODES) {
+        const avg = pilotAverages[code]
+        currentScores.set(getPairKey(pilotIndex, code), typeof avg === 'number' ? avg : 0)
+      }
+    }
+
     while (selectedExercises.length < limit) {
       // L — пары с дефицитом > 0
       const L = [...deficits.entries()].filter(([, val]) => val > 0)
@@ -260,9 +278,9 @@ export async function GET(request: Request) {
       } else {
         // Uti для любой пары из Lmin
         const LminSet = new Set<CompetencyCode>([...LminCodes])
-        const Uti = allExercises.filter(
-          (ex) => !usedExerciseIds.has(ex.id) && ex.competencies.some((c) => LminSet.has(c))
-        )
+        const filterUti = (ex: TExercise) =>
+          !usedExerciseIds.has(ex.id) && ex.competencies.some((c) => LminSet.has(c))
+        const Uti = allExercises.filter(filterUti).sort((a, b) => a.id - b.id)
 
         if (Uti.length > 0) {
           const { bestExercise, bestRank } = tryPickBestExercise(Uti, deficits, d, Lcodes)
@@ -270,7 +288,7 @@ export async function GET(request: Request) {
           best = bestRank
         } else {
           const { bestExercise, bestRank } = tryPickBestExercise(
-            allExercises.filter((ex) => !usedExerciseIds.has(ex.id)),
+            allExercises.filter((ex) => !usedExerciseIds.has(ex.id)).sort((a, b) => a.id - b.id),
             deficits,
             d,
             Lcodes
@@ -289,17 +307,69 @@ export async function GET(request: Request) {
 
       selectedExercises.push(candidate)
       usedExerciseIds.add(candidate.id)
-      applyExerciseAndTrack(candidate.competencies, deficits, d, pilots, developments)
+      applyExerciseAndTrack(
+        candidate.competencies,
+        deficits,
+        d,
+        pilots,
+        developments,
+        currentScores
+      )
     }
 
-    // Добор до лимита (если остались места)
-    if (selectedExercises.length < limit) {
-      for (const ex of allExercises) {
-        if (selectedExercises.length >= limit) {
-          break
+    // Этап 2: гармоничное развитие — распределим оставшиеся слоты оптимизацией
+    const remaining = limit - selectedExercises.length
+    if (remaining > 0) {
+      const exercisesLeft = allExercises
+        .filter((ex) => !usedExerciseIds.has(ex.id))
+        .sort((a, b) => a.id - b.id)
+      if (exercisesLeft.length > 0) {
+        // Сформируем пары (pilotIndex, competency)
+        const pairs: Array<{ pilotIndex: number; code: CompetencyCode }> = []
+        for (let pilotIndex = 0; pilotIndex < pilots.length; pilotIndex++) {
+          for (const code of ALL_CODES) pairs.push({ pilotIndex, code })
         }
-        if (!usedExerciseIds.has(ex.id)) {
-          selectedExercises.push(ex)
+
+        const K = pairs.length
+        const M = exercisesLeft.length
+
+        const A: number[][] = Array.from({ length: K }, () => Array(M).fill(0))
+        for (let k = 0; k < K; k++) {
+          const code = pairs[k].code
+          for (let j = 0; j < M; j++) {
+            A[k][j] = exercisesLeft[j].competencies.includes(code) ? 1 : 0
+          }
+        }
+
+        const s0: number[] = pairs.map(({ pilotIndex, code }) => {
+          const v = currentScores.get(getPairKey(pilotIndex, code))
+          return typeof v === 'number' ? v : 0
+        })
+
+        const { counts } = optimizeBalancedCountsPowell({
+          A,
+          s0,
+          d,
+          L: remaining,
+          gamma: 10,
+          lambda: 2000,
+        })
+
+        // Преобразуем counts в фактический список упражнений и обновим трекинг
+        for (let j = 0; j < M; j++) {
+          const ex = exercisesLeft[j]
+          const c = counts[j] ?? 0
+          for (let t = 0; t < c; t++) {
+            if (selectedExercises.length >= limit) {
+              break
+            }
+            selectedExercises.push(ex)
+            usedExerciseIds.add(ex.id)
+            applyExerciseAndTrack(ex.competencies, deficits, d, pilots, developments, currentScores)
+          }
+          if (selectedExercises.length >= limit) {
+            break
+          }
         }
       }
     }

@@ -14,7 +14,9 @@ export async function GET() {
 
     const payload = await verifyToken(token)
     if (!payload) {
-      return NextResponse.json({ error: 'Недействительный токен' }, { status: 401 })
+      const res = NextResponse.json({ error: 'Недействительный токен' }, { status: 401 })
+      res.cookies.delete('token')
+      return res
     }
 
     const userProfile = await prisma.userProfile.findUnique({

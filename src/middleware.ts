@@ -11,7 +11,9 @@ export async function middleware(request: NextRequest) {
 
   const payload = await verifyToken(token)
   if (!payload) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    const response = NextResponse.redirect(new URL('/login', request.url))
+    response.cookies.delete('token')
+    return response
   }
 
   return NextResponse.next()
