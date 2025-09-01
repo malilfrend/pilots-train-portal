@@ -4,6 +4,7 @@ import { TExercise } from '@/types/exercises'
 import { AssessmentSourceType, CompetencyCode } from '@prisma/client'
 import { ASSESSMENT_TYPES } from '@/types/assessment'
 import { loadWeights } from '@/db-utils/load-weights'
+import { optimizeBalancedCountsPowell } from '@/lib/optimization'
 
 type TPilotId = number
 
@@ -29,7 +30,7 @@ async function getPilotAverages(
     select: { competencyCode: true, sourceType: true, score: true },
   })
 
-  const byCode: Record<CompetencyCode, Partial<Record<AssessmentSourceType, number>>> = {} as any
+  const byCode = {} as Record<CompetencyCode, Partial<Record<AssessmentSourceType, number>>>
   for (const r of rows) {
     if (!byCode[r.competencyCode]) {
       byCode[r.competencyCode] = {}
@@ -37,7 +38,7 @@ async function getPilotAverages(
     byCode[r.competencyCode][r.sourceType] = r.score
   }
 
-  const avg: Record<CompetencyCode, number | null> = {} as any
+  const avg: Record<CompetencyCode, number | null> = {} as Record<CompetencyCode, number | null>
   for (const code of ALL_CODES) {
     const w = weights[code] || DEFAULT_WEIGHTS
     let sum = 0
@@ -158,7 +159,7 @@ const tryPickBestExercise = (
       (r.imp === bestRank.imp && r.cover > bestRank.cover) ||
       (r.imp === bestRank.imp &&
         r.cover === bestRank.cover &&
-        (bestExercise === null || exercise.name.localeCompare(bestExercise.name, 'en') < 0))
+        (bestExercise === null || exercise.id < bestExercise.id))
     ) {
       bestExercise = exercise
       bestRank = r
@@ -277,9 +278,9 @@ export async function GET(request: Request) {
       } else {
         // Uti для любой пары из Lmin
         const LminSet = new Set<CompetencyCode>([...LminCodes])
-        const Uti = allExercises.filter(
-          (ex) => !usedExerciseIds.has(ex.id) && ex.competencies.some((c) => LminSet.has(c))
-        )
+        const filterUti = (ex: TExercise) =>
+          !usedExerciseIds.has(ex.id) && ex.competencies.some((c) => LminSet.has(c))
+        const Uti = allExercises.filter(filterUti).sort((a, b) => a.id - b.id)
 
         if (Uti.length > 0) {
           const { bestExercise, bestRank } = tryPickBestExercise(Uti, deficits, d, Lcodes)
@@ -287,7 +288,7 @@ export async function GET(request: Request) {
           best = bestRank
         } else {
           const { bestExercise, bestRank } = tryPickBestExercise(
-            allExercises.filter((ex) => !usedExerciseIds.has(ex.id)),
+            allExercises.filter((ex) => !usedExerciseIds.has(ex.id)).sort((a, b) => a.id - b.id),
             deficits,
             d,
             Lcodes
@@ -316,17 +317,59 @@ export async function GET(request: Request) {
       )
     }
 
-    // Добор до лимита (если остались места)
-    if (selectedExercises.length < limit) {
-      for (const ex of allExercises) {
-        if (selectedExercises.length >= limit) {
-          break
+    // Этап 2: гармоничное развитие — распределим оставшиеся слоты оптимизацией
+    const remaining = limit - selectedExercises.length
+    if (remaining > 0) {
+      const exercisesLeft = allExercises
+        .filter((ex) => !usedExerciseIds.has(ex.id))
+        .sort((a, b) => a.id - b.id)
+      if (exercisesLeft.length > 0) {
+        // Сформируем пары (pilotIndex, competency)
+        const pairs: Array<{ pilotIndex: number; code: CompetencyCode }> = []
+        for (let pilotIndex = 0; pilotIndex < pilots.length; pilotIndex++) {
+          for (const code of ALL_CODES) pairs.push({ pilotIndex, code })
         }
-        if (!usedExerciseIds.has(ex.id)) {
-          selectedExercises.push(ex)
-          usedExerciseIds.add(ex.id)
-          // фиксируем прирост и для доборных упражнений
-          applyExerciseAndTrack(ex.competencies, deficits, d, pilots, developments, currentScores)
+
+        const K = pairs.length
+        const M = exercisesLeft.length
+
+        const A: number[][] = Array.from({ length: K }, () => Array(M).fill(0))
+        for (let k = 0; k < K; k++) {
+          const code = pairs[k].code
+          for (let j = 0; j < M; j++) {
+            A[k][j] = exercisesLeft[j].competencies.includes(code) ? 1 : 0
+          }
+        }
+
+        const s0: number[] = pairs.map(({ pilotIndex, code }) => {
+          const v = currentScores.get(getPairKey(pilotIndex, code))
+          return typeof v === 'number' ? v : 0
+        })
+
+        const { counts } = optimizeBalancedCountsPowell({
+          A,
+          s0,
+          d,
+          L: remaining,
+          gamma: 10,
+          lambda: 2000,
+        })
+
+        // Преобразуем counts в фактический список упражнений и обновим трекинг
+        for (let j = 0; j < M; j++) {
+          const ex = exercisesLeft[j]
+          const c = counts[j] ?? 0
+          for (let t = 0; t < c; t++) {
+            if (selectedExercises.length >= limit) {
+              break
+            }
+            selectedExercises.push(ex)
+            usedExerciseIds.add(ex.id)
+            applyExerciseAndTrack(ex.competencies, deficits, d, pilots, developments, currentScores)
+          }
+          if (selectedExercises.length >= limit) {
+            break
+          }
         }
       }
     }
