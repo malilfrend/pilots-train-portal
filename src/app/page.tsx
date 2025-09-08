@@ -1,5 +1,5 @@
-import { Landing } from '@/components/landing/Landing'
 import { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 
 export const metadata: Metadata = {
   title: 'Дневник тренажёрной подготовки пилотов',
@@ -7,9 +7,5 @@ export const metadata: Metadata = {
 }
 
 export default function HomePage() {
-  return (
-    <main>
-      <Landing />
-    </main>
-  )
+  redirect('/profile')
 }
