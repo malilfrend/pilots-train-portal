@@ -41,7 +41,7 @@ export const AverageAssessmentsTable = ({
                   </td>
                   <td className="border border-gray-300 px-4 py-2 text-center font-bold">
                     {competencyAverages[competencyCode]}
-                    {development?.[competencyCode] && (
+                    {!!development?.[competencyCode] && (
                       <span className="text-xs text-green-500">
                         {' '}
                         + {development[competencyCode]}
