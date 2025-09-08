@@ -17,9 +17,7 @@ export function Header() {
     <header className="border-b">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold">
-            Пилоты и их оценки
-          </Link>
+          <div />
           {user ? (
             <div className="flex items-center gap-6">
               <div className="hidden md:flex items-center">
