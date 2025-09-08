@@ -55,7 +55,7 @@ export function ExerciseList({ exercises }: TProps) {
           {exercise.step && (
             <span
               className={
-                `inline-flex absolute left-1 top-1 items-center px-2 py-0.5 rounded text-xs font-medium border ` +
+                `inline-flex absolute right-1 bottom-1 items-center px-0.5 py-0.5 rounded text-xs font-medium border ` +
                 (exercise.step === 'first'
                   ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
                   : 'bg-purple-100 text-purple-800 border-purple-200')
