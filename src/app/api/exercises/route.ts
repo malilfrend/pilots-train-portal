@@ -305,7 +305,7 @@ export async function GET(request: Request) {
         break
       }
 
-      selectedExercises.push(candidate)
+      selectedExercises.push({ ...candidate, step: 'first' })
       usedExerciseIds.add(candidate.id)
       applyExerciseAndTrack(
         candidate.competencies,
@@ -363,7 +363,7 @@ export async function GET(request: Request) {
             if (selectedExercises.length >= limit) {
               break
             }
-            selectedExercises.push(ex)
+            selectedExercises.push({ ...ex, step: 'second' })
             usedExerciseIds.add(ex.id)
             applyExerciseAndTrack(ex.competencies, deficits, d, pilots, developments, currentScores)
           }

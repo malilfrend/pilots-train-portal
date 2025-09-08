@@ -1,15 +1,10 @@
 'use client'
 
-import { CompetencyCode, COMPETENCIES } from '@/types/assessment'
-
-interface Exercise {
-  id: number
-  name: string
-  competencies: CompetencyCode[]
-}
+import { COMPETENCIES } from '@/types/assessment'
+import { TExercise } from '@/types/exercises'
 
 type TProps = {
-  exercises: Exercise[]
+  exercises: TExercise[]
 }
 
 export function ExerciseList({ exercises }: TProps) {
@@ -26,7 +21,7 @@ export function ExerciseList({ exercises }: TProps) {
       {exercises.map((exercise, idx) => (
         <div
           key={exercise.id}
-          className="bg-white p-6 rounded-lg shadow border hover:shadow-md transition-shadow"
+          className="bg-white p-6 rounded-lg shadow border hover:shadow-md transition-shadow relative"
         >
           <div className="flex justify-between items-start mb-4">
             <div className="flex items-center gap-2">
@@ -34,7 +29,8 @@ export function ExerciseList({ exercises }: TProps) {
               <h3 className="text-lg font-semibold text-gray-900">{exercise.name}</h3>
             </div>
             <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-              ID: {exercise.id}
+              ID:{' '}
+              {exercise.id}
             </span>
           </div>
 
@@ -55,6 +51,19 @@ export function ExerciseList({ exercises }: TProps) {
               })}
             </div>
           </div>
+
+          {exercise.step && (
+            <span
+              className={
+                `inline-flex absolute left-1 top-1 items-center px-2 py-0.5 rounded text-xs font-medium border ` +
+                (exercise.step === 'first'
+                  ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                  : 'bg-purple-100 text-purple-800 border-purple-200')
+              }
+            >
+              {exercise.step === 'first' ? 'Этап 1' : 'Этап 2'}
+            </span>
+          )}
         </div>
       ))}
     </div>
