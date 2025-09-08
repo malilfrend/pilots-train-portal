@@ -14,6 +14,11 @@ export const AverageAssessmentsTable = ({
   development,
   showTotal = false,
 }: TProps) => {
+  const getTotal = (competencyCode: CompetencyCode) => {
+    return Number(
+      (competencyAverages[competencyCode] ?? 0) + (development?.[competencyCode] ?? 0)
+    ).toFixed(1)
+  }
   return (
     <div className="bg-white p-6 rounded-lg shadow mb-6">
       <h3 className="text-xl font-semibold mb-4">Общая таблица компетенций {pilotName}</h3>
@@ -50,8 +55,7 @@ export const AverageAssessmentsTable = ({
                   </td>
                   {showTotal && (
                     <td className="border border-gray-300 px-4 py-2 text-center font-bold">
-                      {(competencyAverages[competencyCode] ?? 0) +
-                        (development?.[competencyCode] ?? 0)}
+                      {getTotal(competencyCode)}
                     </td>
                   )}
                 </tr>
