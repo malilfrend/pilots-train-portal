@@ -14,10 +14,9 @@ interface FormErrors {
   firstName?: string
   lastName?: string
   birthDate?: string
-  university?: string
-  company?: string
-  experience?: string
   position?: string
+  flightHours?: string
+  aircraftType?: string
   role?: string
   root?: string
 }
@@ -30,10 +29,9 @@ export function RegisterForm() {
     firstName: '',
     lastName: '',
     birthDate: '',
-    university: '',
-    company: '',
-    experience: '',
     position: '',
+    flightHours: '',
+    aircraftType: '',
     role: 'PILOT',
   })
   const [errors, setErrors] = useState<FormErrors>({})
@@ -86,7 +84,10 @@ export function RegisterForm() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          flightHours: formData.flightHours ? parseInt(formData.flightHours) : null,
+        }),
       })
 
       const data = await response.json()
@@ -99,7 +100,7 @@ export function RegisterForm() {
       setUser(data.user)
 
       router.push('/')
-    } catch (error) {
+    } catch {
       setErrors({ root: 'Что-то пошло не так. Попробуйте позже.' })
     } finally {
       setLoading(false)
@@ -161,20 +162,6 @@ export function RegisterForm() {
           error={errors.birthDate}
         />
         <FormField
-          label="Университет"
-          name="university"
-          value={formData.university}
-          onChange={handleChange}
-          error={errors.university}
-        />
-        <FormField
-          label="Компания"
-          name="company"
-          value={formData.company}
-          onChange={handleChange}
-          error={errors.company}
-        />
-        <FormField
           label="Должность"
           name="position"
           value={formData.position}
@@ -183,12 +170,21 @@ export function RegisterForm() {
           placeholder="Например: Второй пилот Boeing 737"
         />
         <FormField
-          label="Опыт"
-          name="experience"
-          value={formData.experience}
+          label="Налёт (часы)"
+          type="number"
+          name="flightHours"
+          value={formData.flightHours}
           onChange={handleChange}
-          error={errors.experience}
-          placeholder="Например: 5 лет летного стажа, 3500 часов налета"
+          error={errors.flightHours}
+          placeholder="Например: 3500"
+        />
+        <FormField
+          label="Тип воздушного судна"
+          name="aircraftType"
+          value={formData.aircraftType}
+          onChange={handleChange}
+          error={errors.aircraftType}
+          placeholder="Например: Boeing 737"
         />
         <select
           name="role"

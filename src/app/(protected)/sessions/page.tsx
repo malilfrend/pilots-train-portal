@@ -12,9 +12,8 @@ import { PilotsList } from '@/components/features/instructor/PilotsList'
 import { TPilotAverage } from '@/app/api/average-assessments/route'
 import { AverageAssessmentsTable } from '@/components/features/profile/AverageAssessmentsTable'
 import { INITIAL_COMPETENCY_SCORES } from '@/constants/initials-competency'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { TDevelopments } from '@/app/api/exercises/route'
+import { AddExerciseModal } from '@/components/features/instructor/AddExerciseModal'
 
 export default function SessionsPage() {
   const { user } = useAuth()
@@ -29,14 +28,14 @@ export default function SessionsPage() {
 
   const [developments, setDevelopments] = useState<TDevelopments | null>(null)
 
+  const [showAddModal, setShowAddModal] = useState(false)
+
   const [averageAssessments, setAverageAssessments] = useState<{
     pilot1?: TPilotAverage
     pilot2?: TPilotAverage
   } | null>(null)
 
   const [selectedPilotIdsMap, setSelectedPilotIdsMap] = useState<Record<string, boolean>>({})
-  const [R, setR] = useState<number>(3.5)
-  const [d, setD] = useState<number>(0.1)
 
   const isDisabledFetchExercises = Object.values(selectedPilotIdsMap).length < 2
 
@@ -61,6 +60,17 @@ export default function SessionsPage() {
     setSelectedPilotIdsMap((prev) => ({ ...prev, [pilotId]: true }))
   }
 
+  const handleDeleteExercise = (index: number) => {
+    setExercises((prev) => (prev ? prev.filter((_, i) => i !== index) : prev))
+  }
+
+  const handleAddExercise = (exercise: TExercise) => {
+    setExercises((prev) => (prev ? [...prev, exercise] : [exercise]))
+    setShowAddModal(false)
+  }
+
+  const exerciseIds = useMemo(() => new Set(exercises?.map((ex) => ex.id) ?? []), [exercises])
+
   const handleChooseOtherPilots = () => {
     setSelectedPilotIdsMap({})
     setExercises(null)
@@ -72,9 +82,7 @@ export default function SessionsPage() {
     const pilotIds = Object.keys(selectedPilotIdsMap)
 
     try {
-      const response = await fetch(
-        `/api/exercises?pilot1Id=${pilotIds[0]}&pilot2Id=${pilotIds[1]}&R=${R}&d=${d}`
-      )
+      const response = await fetch(`/api/exercises?pilot1Id=${pilotIds[0]}&pilot2Id=${pilotIds[1]}`)
 
       if (!response.ok) {
         throw new Error('Ошибка при загрузке упражнений')
@@ -129,14 +137,6 @@ export default function SessionsPage() {
     fetchExercises()
   }
 
-  const handleChangeR = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setR(Number(e.target.value))
-  }
-
-  const handleChangeD = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setD(Number(e.target.value))
-  }
-
   // Дополнительная проверка, что пользователь - инструктор
   useEffect(() => {
     if (user && user.role !== 'INSTRUCTOR') {
@@ -175,34 +175,6 @@ export default function SessionsPage() {
           {hasPilotsAndExercises && (
             <Button onClick={handleChooseOtherPilots}>Выбрать других пилотов</Button>
           )}
-
-          <div className="flex items-center gap-2">
-            <Label htmlFor="R">R</Label>
-            <Input
-              min={0}
-              max={5}
-              step={0.1}
-              type="number"
-              id="R"
-              placeholder="R"
-              value={R}
-              onChange={handleChangeR}
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Label htmlFor="d">d</Label>
-            <Input
-              type="number"
-              min={0}
-              step={0.1}
-              max={1}
-              id="d"
-              placeholder="d"
-              value={d}
-              onChange={handleChangeD}
-            />
-          </div>
         </div>
 
         {!hasPilotsAndExercises && (
@@ -253,7 +225,22 @@ export default function SessionsPage() {
           />
         )}
 
-        {!!exercises && <ExerciseList exercises={exercises} />}
+        {!!exercises && (
+          <>
+            <div className="mb-4 flex justify-end">
+              <Button onClick={() => setShowAddModal(true)}>Добавить упражнение</Button>
+            </div>
+            <ExerciseList exercises={exercises} onDelete={handleDeleteExercise} />
+          </>
+        )}
+
+        {showAddModal && (
+          <AddExerciseModal
+            excludeIds={exerciseIds}
+            onAdd={handleAddExercise}
+            onClose={() => setShowAddModal(false)}
+          />
+        )}
       </div>
     </ClientAuthGuard>
   )

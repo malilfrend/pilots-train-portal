@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole, CompetencyCode, AssessmentSourceType } from '@prisma/client'
+import { PrismaClient, UserRole, CompetencyCode } from '@prisma/client'
 import { hash } from 'bcrypt'
 import * as XLSX from 'xlsx'
 import path from 'path'
@@ -7,7 +7,7 @@ const prisma = new PrismaClient()
 
 async function main() {
   console.log('Очистка существующих данных...')
-  
+
   // Сначала удаляем данные из зависимых таблиц
   try {
     await prisma.pilotCompetencyScore.deleteMany({})
@@ -15,56 +15,48 @@ async function main() {
   } catch (e) {
     console.log('Таблица PilotCompetencyScore не существует или не может быть очищена')
   }
-  
-  try {
-    await prisma.competencyWeight.deleteMany({})
-    console.log('Удалены записи из CompetencyWeight')
-  } catch (e) {
-    console.log('Таблица CompetencyWeight не существует или не может быть очищена')
-  }
-  
+
   try {
     await prisma.instructor.deleteMany({})
     console.log('Удалены записи из Instructor')
   } catch (e) {
     console.log('Таблица Instructor не существует или не может быть очищена')
   }
-  
+
   try {
     await prisma.pilot.deleteMany({})
     console.log('Удалены записи из Pilot')
   } catch (e) {
     console.log('Таблица Pilot не существует или не может быть очищена')
   }
-  
+
   try {
     await prisma.userProfile.deleteMany({})
     console.log('Удалены записи из UserProfile')
   } catch (e) {
     console.log('Таблица UserProfile не существует или не может быть очищена')
   }
-  
+
   console.log('Данные очищены. Начинаем заполнение...')
 
-  // Хешируем пароль 
+  // Хешируем пароль
   const hashedPassword = await hash('password123', 10)
-  
+
   // Создаем профиль первого пользователя (пилот)
   const vertoletovProfile = await prisma.userProfile.create({
     data: {
       email: 'vertoletov@example.com',
       password: hashedPassword,
       firstName: 'Вертолёт',
-      lastName: 'Вертолётов', 
+      lastName: 'Вертолётов',
       birthDate: new Date('1988-06-20'),
       role: UserRole.PILOT,
-      university: 'Московский авиационный институт',
-      company: 'Аэрофлот',
       position: 'Командир вертолёта Ми-8',
-      experience: '12 лет летного стажа, 7500 часов налета'
+      flightHours: 7500,
+      aircraftType: 'Ми-8',
     }
   })
-  
+
   // Создаем профиль второго пользователя (пилот)
   const poletaevProfile = await prisma.userProfile.create({
     data: {
@@ -74,10 +66,9 @@ async function main() {
       lastName: 'Полетаев',
       birthDate: new Date('1990-03-15'),
       role: UserRole.PILOT,
-      university: 'Ульяновский институт гражданской авиации',
-      company: 'S7 Airlines',
       position: 'Второй пилот Airbus A320',
-      experience: '8 лет летного стажа, 4200 часов налета'
+      flightHours: 4200,
+      aircraftType: 'Airbus A320',
     }
   })
 
@@ -90,10 +81,9 @@ async function main() {
       lastName: 'Инструкторов',
       birthDate: new Date('1975-08-22'),
       role: UserRole.INSTRUCTOR,
-      university: 'СПбГУ ГА',
-      company: 'Авиационный учебный центр',
       position: 'Старший инструктор',
-      experience: '25 лет летного стажа, 15000 часов налета'
+      flightHours: 15000,
+      aircraftType: 'Boeing 737',
     }
   })
 
@@ -131,57 +121,7 @@ async function main() {
     }
   })
 
-  // Создаем веса компетенций для разных источников
-  const competencyWeights = [
-    // PRO - Procedures
-    { competencyCode: CompetencyCode.PRO, sourceType: AssessmentSourceType.PC, weight: 0.3 },
-    { competencyCode: CompetencyCode.PRO, sourceType: AssessmentSourceType.FDM, weight: 0.2 },
-    { competencyCode: CompetencyCode.PRO, sourceType: AssessmentSourceType.EVAL, weight: 0.3 },
-    { competencyCode: CompetencyCode.PRO, sourceType: AssessmentSourceType.ASR, weight: 0.2 },
-    // COM - Communication
-    { competencyCode: CompetencyCode.COM, sourceType: AssessmentSourceType.PC, weight: 0.25 },
-    { competencyCode: CompetencyCode.COM, sourceType: AssessmentSourceType.FDM, weight: 0.2 },
-    { competencyCode: CompetencyCode.COM, sourceType: AssessmentSourceType.EVAL, weight: 0.35 },
-    { competencyCode: CompetencyCode.COM, sourceType: AssessmentSourceType.ASR, weight: 0.2 },
-    // FPA - Flight Path Automation
-    { competencyCode: CompetencyCode.FPA, sourceType: AssessmentSourceType.PC, weight: 0.25 },
-    { competencyCode: CompetencyCode.FPA, sourceType: AssessmentSourceType.FDM, weight: 0.3 },
-    { competencyCode: CompetencyCode.FPA, sourceType: AssessmentSourceType.EVAL, weight: 0.25 },
-    { competencyCode: CompetencyCode.FPA, sourceType: AssessmentSourceType.ASR, weight: 0.2 },
-    // FPM - Flight Path Manual
-    { competencyCode: CompetencyCode.FPM, sourceType: AssessmentSourceType.PC, weight: 0.3 },
-    { competencyCode: CompetencyCode.FPM, sourceType: AssessmentSourceType.FDM, weight: 0.25 },
-    { competencyCode: CompetencyCode.FPM, sourceType: AssessmentSourceType.EVAL, weight: 0.25 },
-    { competencyCode: CompetencyCode.FPM, sourceType: AssessmentSourceType.ASR, weight: 0.2 },
-    // LTW - Leadership and Teamwork
-    { competencyCode: CompetencyCode.LTW, sourceType: AssessmentSourceType.PC, weight: 0.2 },
-    { competencyCode: CompetencyCode.LTW, sourceType: AssessmentSourceType.FDM, weight: 0.15 },
-    { competencyCode: CompetencyCode.LTW, sourceType: AssessmentSourceType.EVAL, weight: 0.4 },
-    { competencyCode: CompetencyCode.LTW, sourceType: AssessmentSourceType.ASR, weight: 0.25 },
-    // PSD - Problem Solving and Decision
-    { competencyCode: CompetencyCode.PSD, sourceType: AssessmentSourceType.PC, weight: 0.25 },
-    { competencyCode: CompetencyCode.PSD, sourceType: AssessmentSourceType.FDM, weight: 0.15 },
-    { competencyCode: CompetencyCode.PSD, sourceType: AssessmentSourceType.EVAL, weight: 0.3 },
-    { competencyCode: CompetencyCode.PSD, sourceType: AssessmentSourceType.ASR, weight: 0.3 },
-    // SAW - Situational Awareness
-    { competencyCode: CompetencyCode.SAW, sourceType: AssessmentSourceType.PC, weight: 0.25 },
-    { competencyCode: CompetencyCode.SAW, sourceType: AssessmentSourceType.FDM, weight: 0.2 },
-    { competencyCode: CompetencyCode.SAW, sourceType: AssessmentSourceType.EVAL, weight: 0.3 },
-    { competencyCode: CompetencyCode.SAW, sourceType: AssessmentSourceType.ASR, weight: 0.25 },
-    // WLM - Workload Management
-    { competencyCode: CompetencyCode.WLM, sourceType: AssessmentSourceType.PC, weight: 0.25 },
-    { competencyCode: CompetencyCode.WLM, sourceType: AssessmentSourceType.FDM, weight: 0.2 },
-    { competencyCode: CompetencyCode.WLM, sourceType: AssessmentSourceType.EVAL, weight: 0.3 },
-    { competencyCode: CompetencyCode.WLM, sourceType: AssessmentSourceType.ASR, weight: 0.25 },
-  ]
-
-  for (const weight of competencyWeights) {
-    await prisma.competencyWeight.create({
-      data: weight
-    })
-  }
-
-  // Компетенции и источники для генерации оценок
+  // Компетенции для генерации оценок
   const allCompetencyCodes = [
     CompetencyCode.PRO,
     CompetencyCode.COM,
@@ -192,29 +132,20 @@ async function main() {
     CompetencyCode.SAW,
     CompetencyCode.WLM,
   ];
-  const allSources = [
-    AssessmentSourceType.PC,
-    AssessmentSourceType.FDM,
-    AssessmentSourceType.EVAL,
-    AssessmentSourceType.ASR
-  ];
 
-  // Генерируем оценки для каждого пилота, источника и компетенции
+  // Генерируем оценки для каждого пилота и компетенции (одна оценка на компетенцию)
   for (const pilot of [vertoletovPilot, poletaevPilot]) {
-    for (const sourceType of allSources) {
-      for (const code of allCompetencyCodes) {
-        await prisma.pilotCompetencyScore.create({
-          data: {
-            pilotId: pilot.id,
-            instructorId: mentor.id,
-            competencyCode: code,
-            sourceType: sourceType,
-            score: Math.floor(Math.random() * 4) + 2, // случайная оценка 2-5
-            date: new Date('2024-02-10'),
-            comment: `Тестовая оценка для ${code} (${sourceType})`,
-          }
-        })
-      }
+    for (const code of allCompetencyCodes) {
+      await prisma.pilotCompetencyScore.create({
+        data: {
+          pilotId: pilot.id,
+          instructorId: mentor.id,
+          competencyCode: code,
+          score: Math.floor(Math.random() * 4) + 2, // случайная оценка 2-5
+          date: new Date('2024-02-10'),
+          comment: `Тестовая оценка для ${code}`,
+        }
+      })
     }
   }
 

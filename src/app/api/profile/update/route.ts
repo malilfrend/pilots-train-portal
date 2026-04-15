@@ -31,9 +31,8 @@ export async function PUT(request: Request) {
       data: {
         firstName: validated.firstName,
         lastName: validated.lastName,
-        university: validated.university,
-        company: validated.company,
-        experience: validated.experience,
+        flightHours: validated.flightHours,
+        aircraftType: validated.aircraftType,
         position: validated.position,
       },
     })
@@ -59,9 +58,8 @@ export async function PUT(request: Request) {
         firstName: userProfile.firstName,
         lastName: userProfile.lastName,
         role: userProfile.role,
-        university: userProfile.university,
-        company: userProfile.company,
-        experience: userProfile.experience,
+        flightHours: userProfile.flightHours,
+        aircraftType: userProfile.aircraftType,
         position: userProfile.position,
         profileId: userProfile.id,
         pilotId: userProfile.pilot?.id,

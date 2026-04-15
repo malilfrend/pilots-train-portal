@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { TExercise } from '@/types/exercises'
-import { AssessmentSourceType, CompetencyCode } from '@prisma/client'
-import { ASSESSMENT_TYPES } from '@/types/assessment'
-import { loadWeights } from '@/db-utils/load-weights'
+import { CompetencyCode } from '@prisma/client'
 import { optimizeBalancedCountsPowell } from '@/lib/optimization'
 
 type TPilotId = number
@@ -14,45 +12,16 @@ type TResponse = { exercises: Array<TExercise>; developments?: TDevelopments }
 
 const ALL_CODES: CompetencyCode[] = ['PRO', 'COM', 'FPA', 'FPM', 'LTW', 'PSD', 'SAW', 'WLM']
 
-const DEFAULT_WEIGHTS: Record<AssessmentSourceType, number> = {
-  PC: 0.35,
-  FDM: 0.15,
-  EVAL: 0.3,
-  ASR: 0.2,
-}
-
-async function getPilotAverages(
-  pilotId: number,
-  weights: Record<CompetencyCode, Record<AssessmentSourceType, number>>
-): Promise<Record<CompetencyCode, number | null>> {
+async function getPilotAverages(pilotId: number): Promise<Record<CompetencyCode, number | null>> {
   const rows = await prisma.pilotCompetencyScore.findMany({
     where: { pilotId },
-    select: { competencyCode: true, sourceType: true, score: true },
+    select: { competencyCode: true, score: true },
   })
-
-  const byCode = {} as Record<CompetencyCode, Partial<Record<AssessmentSourceType, number>>>
-  for (const r of rows) {
-    if (!byCode[r.competencyCode]) {
-      byCode[r.competencyCode] = {}
-    }
-    byCode[r.competencyCode][r.sourceType] = r.score
-  }
 
   const avg: Record<CompetencyCode, number | null> = {} as Record<CompetencyCode, number | null>
   for (const code of ALL_CODES) {
-    const w = weights[code] || DEFAULT_WEIGHTS
-    let sum = 0
-    let sumW = 0
-
-    ASSESSMENT_TYPES.forEach((type) => {
-      const val = byCode[code]?.[type]
-      const ww = w[type] ?? DEFAULT_WEIGHTS[type]
-      if (typeof val === 'number') {
-        sum += val * ww
-        sumW += ww
-      }
-    })
-    avg[code] = sumW > 0 ? Math.round((sum / sumW) * 10) / 10 : null
+    const found = rows.find((r) => r.competencyCode === code)
+    avg[code] = found ? found.score : null
   }
   return avg
 }
@@ -98,7 +67,6 @@ function applyExerciseAndTrack(
   track: TDevelopments,
   currentScores: Map<TPairKey, number>
 ) {
-  // 1) Фиксируем прирост по всем компетенциям упражнения для каждого пилота
   for (let pilotIndex = 0; pilotIndex < pilots.length; pilotIndex++) {
     const pilotId = pilots[pilotIndex]
     if (pilotId == null) continue
@@ -108,21 +76,17 @@ function applyExerciseAndTrack(
       const key = getPairKey(pilotIndex, code)
       const currentDeficit = deficits.get(key) ?? 0
       const currentScore = currentScores.get(key) ?? 5
-      // Базовый прирост: если есть дефицит — не больше его и d, иначе d (этап 2)
       const baseIncrement = currentDeficit > 0 ? Math.min(currentDeficit, d) : d
-      // Потолок: не превышать 5 баллов
       const headroom = Math.max(0, 5 - currentScore)
       const increment = Math.min(baseIncrement, headroom)
 
       const prev = track[pilotId][code] ?? 0
       track[pilotId][code] = Math.round((prev + increment) * 10) / 10
 
-      // 2) Обновляем дефицит только если он был положительным
       if (currentDeficit > 0) {
         deficits.set(key, Math.max(0, Math.round((currentDeficit - increment) * 1000) / 1000))
       }
 
-      // 3) Обновляем текущую оценку с учётом потолка 5
       currentScores.set(key, Math.round((currentScore + increment) * 10) / 10)
     }
   }
@@ -195,6 +159,7 @@ export async function GET(request: Request) {
     const allExercises: TExercise[] = exercisesFromDB.map((exercise) => ({
       id: exercise.id,
       name: exercise.name,
+      executionTime: exercise.executionTime,
       competencies: exercise.competencies.map(
         (competency) => competency.competencyCode as CompetencyCode
       ),
@@ -204,8 +169,6 @@ export async function GET(request: Request) {
     if (!pilot1Id && !pilot2Id) {
       return NextResponse.json({ exercises: allExercises } as TResponse)
     }
-
-    const weights = await loadWeights()
 
     // Считаем дефициты по парам (pilot, code)
     const deficits = new Map<TPairKey, number>()
@@ -220,8 +183,7 @@ export async function GET(request: Request) {
     }
 
     for (let pilotIndex = 0; pilotIndex < pilots.length; pilotIndex++) {
-      // мапа = {[компетенция]: средний балл, ...}
-      const pilotAverages = await getPilotAverages(pilots[pilotIndex], weights)
+      const pilotAverages = await getPilotAverages(pilots[pilotIndex])
 
       for (const code of ALL_CODES) {
         const averageScore = pilotAverages[code]
@@ -238,7 +200,7 @@ export async function GET(request: Request) {
     // Текущие оценки для учёта потолка 5 баллов
     const currentScores = new Map<TPairKey, number>()
     for (let pilotIndex = 0; pilotIndex < pilots.length; pilotIndex++) {
-      const pilotAverages = await getPilotAverages(pilots[pilotIndex], await loadWeights())
+      const pilotAverages = await getPilotAverages(pilots[pilotIndex])
       for (const code of ALL_CODES) {
         const avg = pilotAverages[code]
         currentScores.set(getPairKey(pilotIndex, code), typeof avg === 'number' ? avg : 0)
@@ -253,14 +215,11 @@ export async function GET(request: Request) {
         break
       }
 
-      // здесь используем Math.max, а не Math.min,
-      // потому что нам нужно найти максимальный дефицит
       const Vmin = Math.max(...L.map(([, val]) => val))
       const Lmin = L.filter(([, val]) => val === Vmin).map(([k]) => k)
       const Lcodes = new Set(L.map(([k]) => k.split(':')[1] as CompetencyCode))
       const LminCodes = new Set(Lmin.map((k) => k.split(':')[1] as CompetencyCode))
 
-      // Uimp: упражнения, содержащие любую из Lmin и одновременно хотя бы одну из L (другую или ту же)
       const Uimp = allExercises.filter(
         (exercise) =>
           !usedExerciseIds.has(exercise.id) &&
@@ -276,7 +235,6 @@ export async function GET(request: Request) {
         candidate = bestExercise
         best = bestRank
       } else {
-        // Uti для любой пары из Lmin
         const LminSet = new Set<CompetencyCode>([...LminCodes])
         const filterUti = (ex: TExercise) =>
           !usedExerciseIds.has(ex.id) && ex.competencies.some((c) => LminSet.has(c))
@@ -292,7 +250,7 @@ export async function GET(request: Request) {
             deficits,
             d,
             Lcodes
-          ) // запасной вариант
+          )
           candidate = bestExercise
           best = bestRank
         }
@@ -324,7 +282,6 @@ export async function GET(request: Request) {
         .filter((ex) => !usedExerciseIds.has(ex.id))
         .sort((a, b) => a.id - b.id)
       if (exercisesLeft.length > 0) {
-        // Сформируем пары (pilotIndex, competency)
         const pairs: Array<{ pilotIndex: number; code: CompetencyCode }> = []
         for (let pilotIndex = 0; pilotIndex < pilots.length; pilotIndex++) {
           for (const code of ALL_CODES) pairs.push({ pilotIndex, code })
@@ -355,7 +312,6 @@ export async function GET(request: Request) {
           lambda: 2000,
         })
 
-        // Преобразуем counts в фактический список упражнений и обновим трекинг
         for (let j = 0; j < M; j++) {
           const ex = exercisesLeft[j]
           const c = counts[j] ?? 0
@@ -377,6 +333,38 @@ export async function GET(request: Request) {
     return NextResponse.json({ exercises: selectedExercises, developments } as TResponse)
   } catch (error) {
     console.error('Error fetching exercises:', error)
+    return NextResponse.json({ error: 'Внутренняя ошибка сервера' }, { status: 500 })
+  }
+}
+
+// Обновление времени выполнения упражнения
+export async function PATCH(request: Request) {
+  try {
+    const data = await request.json()
+    const { id, executionTime } = data
+
+    if (!id || typeof id !== 'number') {
+      return NextResponse.json({ error: 'Неверный формат id' }, { status: 400 })
+    }
+
+    if (executionTime !== null && (typeof executionTime !== 'number' || executionTime < 0)) {
+      return NextResponse.json({ error: 'Неверный формат executionTime' }, { status: 400 })
+    }
+
+    const exercise = await prisma.exercise.update({
+      where: { id },
+      data: { executionTime },
+      include: { competencies: true },
+    })
+
+    return NextResponse.json({
+      id: exercise.id,
+      name: exercise.name,
+      executionTime: exercise.executionTime,
+      competencies: exercise.competencies.map((c) => c.competencyCode),
+    })
+  } catch (error) {
+    console.error('Error updating exercise:', error)
     return NextResponse.json({ error: 'Внутренняя ошибка сервера' }, { status: 500 })
   }
 }

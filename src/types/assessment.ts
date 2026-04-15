@@ -25,26 +25,6 @@ export type CompetencyScore = {
 
 export type TAverageCompetencyScores = Record<CompetencyCode, number | null>
 
-export type AssessmentSourceType = 'PC' | 'FDM' | 'EVAL' | 'ASR'
-
-export const ASSESSMENT_TYPES: AssessmentSourceType[] = ['EVAL', 'PC', 'ASR', 'FDM']
-
-export type Assessment = {
-  id: string
-  type: AssessmentSourceType
-  date: string
-  competencyScores: TAverageCompetencyScores
-  instructorComment?: string
-  instructorName?: string
-}
-
-export const ASSESSMENT_TYPES_LABELS: Record<AssessmentSourceType, string> = {
-  EVAL: 'Этап оценки (Evaluation phase, EVAL)',
-  PC: 'Квалификационная проверка (Proficiency check, PC)',
-  ASR: 'Авиационное событие (Aviation safety report, ASR)',
-  FDM: 'Программа анализа полетных данных (Flight data monitoring, FDM)',
-}
-
 export const COMPETENCIES: Record<CompetencyCode, Competency> = {
   PRO: {
     code: 'PRO',

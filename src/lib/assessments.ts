@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma'
-import { AssessmentSourceType } from '@/types/assessment'
+import { CompetencyCode } from '@/types/assessment'
 
 /**
  * Получает данные пилота по ID профиля
@@ -11,86 +11,27 @@ export async function getPilotByProfileId(profileId: number) {
 }
 
 /**
- * Получает оценки пилота с компетенциями
+ * Получает оценки пилота по компетенциям
+ * Возвращает Record<CompetencyCode, number | null>
  */
-export async function getPilotAssessments(pilotId: number) {
-  // Получаем оценки из новой таблицы pilotCompetencyScore
-  const competencyScores = await prisma.pilotCompetencyScore.findMany({
+export async function getPilotAssessments(
+  pilotId: number
+): Promise<Record<CompetencyCode, number | null>> {
+  const scores = await prisma.pilotCompetencyScore.findMany({
     where: { pilotId },
-    orderBy: {
-      date: 'desc',
-    },
-    include: {
-      instructor: {
-        include: {
-          profile: true,
-        },
-      },
+    select: {
+      competencyCode: true,
+      score: true,
     },
   })
 
-  // Группируем оценки по типу источника и дате
-  const groupedScores = competencyScores.reduce(
-    (acc, score) => {
-      const key = `${score.sourceType}-${score.date.toISOString().split('T')[0]}`
-      if (!acc[key]) {
-        acc[key] = {
-          id: key,
-          type: score.sourceType,
-          date: score.date,
-          instructorComment: score.comment || '',
-          instructorId: score.instructorId,
-          instructorName: score.instructor?.profile
-            ? `${score.instructor.profile.firstName} ${score.instructor.profile.lastName}`
-            : 'Неизвестный инструктор',
-          competencyScores: [],
-        }
-      }
+  const allCodes: CompetencyCode[] = ['PRO', 'COM', 'FPA', 'FPM', 'LTW', 'PSD', 'SAW', 'WLM']
 
-      acc[key].competencyScores.push({
-        competencyCode: score.competencyCode,
-        score: score.score,
-      })
+  const result = {} as Record<CompetencyCode, number | null>
+  for (const code of allCodes) {
+    const found = scores.find((s) => s.competencyCode === code)
+    result[code] = found ? found.score : null
+  }
 
-      return acc
-    },
-    {} as Record<string, any>
-  )
-
-  return Object.values(groupedScores)
-}
-
-/**
- * Форматирует оценки для фронтенда
- */
-export function formatAssessments(assessments: any[]) {
-  return assessments.map((assessment) => ({
-    id: assessment.id.toString(),
-    type: assessment.type as AssessmentSourceType,
-    date: assessment.date.toISOString(),
-    instructorComment: assessment.instructorComment,
-    instructorName: assessment.instructorName,
-    competencyScores: Object.fromEntries(
-      assessment.competencyScores.map((score: any) => [score.competencyCode, score.score])
-    ),
-  }))
-}
-
-/**
- * Группирует оценки по типу и берет последнюю для каждого типа
- */
-export function groupAssessmentsByType(
-  formattedAssessments: any[],
-  assessmentTypes: AssessmentSourceType[]
-) {
-  return assessmentTypes.reduce(
-    (acc, type) => {
-      const typeAssessments = formattedAssessments.filter((a) => a.type === type)
-      if (typeAssessments.length > 0) {
-        acc[type] = typeAssessments[0] // Берем самую свежую оценку
-      }
-      return acc
-    },
-    {} as Record<AssessmentSourceType, any>
-  )
+  return result
 }

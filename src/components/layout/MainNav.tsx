@@ -20,9 +20,9 @@ export function MainNav() {
   // Дополнительные маршруты для инструкторов
   if (user?.role === 'INSTRUCTOR') {
     routes.push({
-      href: '/assessments',
-      label: 'Оценки',
-      active: pathname.startsWith('/assessments'),
+      href: '/pilots',
+      label: 'Пилоты',
+      active: pathname.startsWith('/pilots'),
     })
     routes.push({
       href: '/sessions',
@@ -30,9 +30,9 @@ export function MainNav() {
       active: pathname.startsWith('/sessions'),
     })
     routes.push({
-      href: '/competency-weights',
-      label: 'Весовые коэффициенты',
-      active: pathname.startsWith('/competency-weights'),
+      href: '/exercise-database',
+      label: 'База упражнений',
+      active: pathname.startsWith('/exercise-database'),
     })
   }
 
