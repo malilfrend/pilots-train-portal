@@ -8,9 +8,8 @@ interface User {
   firstName: string
   lastName: string
   role: 'PILOT' | 'INSTRUCTOR' | 'SUPER_ADMIN'
-  university?: string
-  company?: string
-  experience?: string
+  flightHours?: number | null
+  aircraftType?: string | null
   position?: string
   profileId?: number
   pilotId?: number
@@ -30,9 +29,8 @@ interface AuthContextType {
 interface UpdateProfileData {
   firstName: string
   lastName: string
-  university?: string | null
-  company?: string | null
-  experience?: string | null
+  flightHours?: number | null
+  aircraftType?: string | null
   position?: string | null
 }
 

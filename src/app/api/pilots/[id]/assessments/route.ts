@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyToken } from '@/lib/auth'
-import { ASSESSMENT_TYPES } from '@/types/assessment'
-import { getPilotAssessments, formatAssessments, groupAssessmentsByType } from '@/lib/assessments'
+import { getPilotAssessments } from '@/lib/assessments'
 import prisma from '@/lib/prisma'
 
 export async function POST(request: Request) {
@@ -28,17 +27,13 @@ export async function POST(request: Request) {
 
     const roleType = payload.roleType as string
 
-    // Проверяем, что пользователь - инструктор
     if (roleType !== 'INSTRUCTOR') {
       return NextResponse.json(
-        {
-          error: 'Доступ запрещен. Только инструкторы могут получать оценки пилотов',
-        },
+        { error: 'Доступ запрещен. Только инструкторы могут получать оценки пилотов' },
         { status: 403 }
       )
     }
 
-    // Проверяем существование пилота
     const pilot = await prisma.pilot.findUnique({
       where: { id: pilotId },
     })
@@ -47,18 +42,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Пилот не найден' }, { status: 404 })
     }
 
-    // Получаем все оценки пилота с компетенциями
-    const assessments = await getPilotAssessments(pilotId)
+    const scores = await getPilotAssessments(pilotId)
 
-    // Преобразуем данные для фронтенда
-    const formattedAssessments = formatAssessments(assessments)
-
-    // Группируем оценки по типу и берем последнюю для каждого типа
-    const assessmentsByType = groupAssessmentsByType(formattedAssessments, ASSESSMENT_TYPES)
-
-    return NextResponse.json({
-      assessments: assessmentsByType,
-    })
+    return NextResponse.json({ scores })
   } catch (error) {
     console.error('Error fetching pilot assessments:', error)
     return NextResponse.json({ error: 'Внутренняя ошибка сервера' }, { status: 500 })

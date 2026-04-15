@@ -6,5 +6,7 @@ export type TPilot = {
     firstName: string
     lastName: string
     position?: string
+    flightHours?: number | null
+    aircraftType?: string | null
   }
 }

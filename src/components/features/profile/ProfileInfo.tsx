@@ -31,10 +31,9 @@ export function ProfileInfo() {
     defaultValues: {
       firstName: user?.firstName || '',
       lastName: user?.lastName || '',
-      university: user?.university || '',
-      company: user?.company || '',
       position: user?.position || '',
-      experience: user?.experience || '',
+      flightHours: user?.flightHours ?? null,
+      aircraftType: user?.aircraftType || '',
     },
   })
 
@@ -56,10 +55,9 @@ export function ProfileInfo() {
     reset({
       firstName: user?.firstName || '',
       lastName: user?.lastName || '',
-      university: user?.university || '',
-      company: user?.company || '',
       position: user?.position || '',
-      experience: user?.experience || '',
+      flightHours: user?.flightHours ?? null,
+      aircraftType: user?.aircraftType || '',
     })
     setIsEditing(false)
     setError(null)
@@ -127,28 +125,6 @@ export function ProfileInfo() {
           </div>
 
           <div>
-            <label htmlFor="university" className="block text-sm text-gray-500 mb-1">
-              Университет
-            </label>
-            <input
-              id="university"
-              {...register('university')}
-              className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="company" className="block text-sm text-gray-500 mb-1">
-              Компания
-            </label>
-            <input
-              id="company"
-              {...register('company')}
-              className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
             <label htmlFor="position" className="block text-sm text-gray-500 mb-1">
               Должность
             </label>
@@ -160,14 +136,25 @@ export function ProfileInfo() {
           </div>
 
           <div>
-            <label htmlFor="experience" className="block text-sm text-gray-500 mb-1">
-              Опыт
+            <label htmlFor="flightHours" className="block text-sm text-gray-500 mb-1">
+              Общий налёт (часы)
             </label>
-            <textarea
-              id="experience"
-              {...register('experience')}
+            <input
+              id="flightHours"
+              type="number"
+              {...register('flightHours', { valueAsNumber: true })}
               className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={3}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="aircraftType" className="block text-sm text-gray-500 mb-1">
+              Тип воздушного судна
+            </label>
+            <input
+              id="aircraftType"
+              {...register('aircraftType')}
+              className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -210,20 +197,16 @@ export function ProfileInfo() {
             <p className="font-medium">{user?.role ? roleLabels[user.role] : '—'}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">Университет</p>
-            <p className="font-medium">{user?.university || '—'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Компания</p>
-            <p className="font-medium">{user?.company || '—'}</p>
-          </div>
-          <div>
             <p className="text-sm text-gray-500">Должность</p>
             <p className="font-medium">{user?.position || '—'}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">Опыт</p>
-            <p className="font-medium">{user?.experience || '—'}</p>
+            <p className="text-sm text-gray-500">Общий налёт (часы)</p>
+            <p className="font-medium">{user?.flightHours ?? '—'}</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Тип воздушного судна</p>
+            <p className="font-medium">{user?.aircraftType || '—'}</p>
           </div>
         </div>
       )}

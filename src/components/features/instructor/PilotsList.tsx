@@ -36,6 +36,12 @@ export const PilotsList = ({ pilots, onSelectPilot, selectedPilotIds }: TProps) 
               <p className="text-sm text-gray-600">
                 {pilot.profile.position || 'Должность не указана'}
               </p>
+              {pilot.profile.flightHours != null && (
+                <p className="text-sm text-gray-500">Налёт: {pilot.profile.flightHours} ч</p>
+              )}
+              {pilot.profile.aircraftType && (
+                <p className="text-sm text-gray-500">Тип ВС: {pilot.profile.aircraftType}</p>
+              )}
             </div>
           ))}
         </div>

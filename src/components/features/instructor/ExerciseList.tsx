@@ -5,9 +5,10 @@ import { TExercise } from '@/types/exercises'
 
 type TProps = {
   exercises: TExercise[]
+  onDelete?: (index: number) => void
 }
 
-export function ExerciseList({ exercises }: TProps) {
+export function ExerciseList({ exercises, onDelete }: TProps) {
   if (exercises.length === 0) {
     return (
       <div className="bg-white p-6 rounded-lg shadow">
@@ -20,7 +21,7 @@ export function ExerciseList({ exercises }: TProps) {
     <div className="space-y-4">
       {exercises.map((exercise, idx) => (
         <div
-          key={exercise.id}
+          key={`${exercise.id}-${idx}`}
           className="bg-white p-6 rounded-lg shadow border hover:shadow-md transition-shadow relative"
         >
           <div className="flex justify-between items-start mb-4">
@@ -28,10 +29,20 @@ export function ExerciseList({ exercises }: TProps) {
               <span className="text-xs text-gray-400 font-mono">#{idx + 1}</span>
               <h3 className="text-lg font-semibold text-gray-900">{exercise.name}</h3>
             </div>
-            <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-              ID:{' '}
-              {exercise.id}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                ID: {exercise.id}
+              </span>
+              {onDelete && (
+                <button
+                  type="button"
+                  className="px-2 py-1 text-xs text-red-600 border border-red-300 rounded hover:bg-red-50 transition-colors"
+                  onClick={() => onDelete(idx)}
+                >
+                  Удалить
+                </button>
+              )}
+            </div>
           </div>
 
           <div>
@@ -61,7 +72,7 @@ export function ExerciseList({ exercises }: TProps) {
                   : 'bg-purple-100 text-purple-800 border-purple-200')
               }
             >
-              {exercise.step === 'first' ? 'Этап 1' : 'Этап 2'}
+              {exercise.step === 'first' ? 'Этап 1' : 'Этап 2'}
             </span>
           )}
         </div>

@@ -14,14 +14,6 @@ enum UserRole {
   SUPER_ADMIN
 }
 
-// Типы оценки (источники оценки)
-enum AssessmentSourceType {
-  PC            // Proficiency check
-  FDM          // Flight data monitoring
-  EVAL          // Evaluation phase
-  ASR            // Aviation safety report
-}
-
 enum CompetencyCode {
   PRO           // Procedures
   COM           // Communication
@@ -41,10 +33,9 @@ model UserProfile {
   firstName     String
   lastName      String
   birthDate     DateTime
-  university    String?
-  company       String?
   role          UserRole
-  experience    String?       // Опыт работы
+  flightHours   Int?          // Общий налёт (часы)
+  aircraftType  String?       // Тип воздушного судна
   position      String?       // Должность
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -76,19 +67,7 @@ model Instructor {
   updatedAt           DateTime           @updatedAt
 }
 
-// Веса компетенций для разных источников
-model CompetencyWeight {
-  id              Int               @id @default(autoincrement())
-  competencyCode  CompetencyCode    // Код компетенции (SLW, PRO, и т.д.)
-  sourceType      AssessmentSourceType // Тип источника (KP, PADP, EVAL, AS)
-  weight          Float             // Вес источника для данной компетенции (0.35, 0.1, и т.д.)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-
-  @@unique([competencyCode, sourceType]) // Уникальное сочетание компетенции и источника
-}
-
-// Оценки пилота по компетенциям от разных источников
+// Оценки пилота по компетенциям
 model PilotCompetencyScore {
   id              Int                 @id @default(autoincrement())
   pilot           Pilot               @relation(fields: [pilotId], references: [id])
@@ -96,14 +75,13 @@ model PilotCompetencyScore {
   instructor      Instructor          @relation(fields: [instructorId], references: [id])
   instructorId    Int
   competencyCode  CompetencyCode      // Код компетенции
-  sourceType      AssessmentSourceType // Тип источника оценки
   score           Int                 // Оценка по шкале (2-5)
   date            DateTime            // Дата выставления оценки
   comment         String?             // Комментарий инструктора
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
-  @@unique([pilotId, competencyCode, sourceType]) // Уникальное сочетание пилота, компетенции и источника
+  @@unique([pilotId, competencyCode]) // Уникальное сочетание пилота и компетенции
 }
 
 // Упражнение со связкой с компетенциями
@@ -113,6 +91,9 @@ model Exercise {
 
   /// Название упражнения
   name        String
+
+  /// Время выполнения упражнения (в минутах)
+  executionTime Int?
 
   /// Связь с компетенциями, которые развивает это упражнение
   competencies ExerciseCompetency[]
