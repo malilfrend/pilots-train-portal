@@ -7,9 +7,9 @@ import { useState, useEffect } from 'react'
 import { CompetencyCode, COMPETENCIES } from '@/types/assessment'
 import { TPilot } from '@/types/pilots'
 import { INITIAL_COMPETENCY_SCORES } from '@/constants/initials-competency'
-import { CreatePilotForm } from '@/components/features/instructor/CreatePilotForm'
+import { CreatePilotModal } from '@/components/features/instructor/CreatePilotModal'
 
-export default function AssessmentsPage() {
+export default function PilotsPage() {
   const { user } = useAuth()
   const router = useRouter()
   const [pilots, setPilots] = useState<TPilot[]>([])
@@ -174,7 +174,7 @@ export default function AssessmentsPage() {
         ) : (
           <>
             {showCreateForm && (
-              <CreatePilotForm
+              <CreatePilotModal
                 onCreated={(pilot) => {
                   setPilots((prev) => [...prev, pilot])
                   setShowCreateForm(false)

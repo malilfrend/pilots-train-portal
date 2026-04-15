@@ -20,9 +20,9 @@ export function MainNav() {
   // Дополнительные маршруты для инструкторов
   if (user?.role === 'INSTRUCTOR') {
     routes.push({
-      href: '/assessments',
-      label: 'Оценки',
-      active: pathname.startsWith('/assessments'),
+      href: '/pilots',
+      label: 'Пилоты',
+      active: pathname.startsWith('/pilots'),
     })
     routes.push({
       href: '/sessions',
