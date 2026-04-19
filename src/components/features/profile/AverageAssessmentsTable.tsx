@@ -1,24 +1,11 @@
-import { TDevelopment } from '@/app/api/exercises/route'
-import { COMPETENCIES, CompetencyCode, TAverageCompetencyScores } from '@/types/assessment'
+import { COMPETENCIES, CompetencyCode, TCompetencyScores } from '@/types/assessment'
 
 type TProps = {
   pilotName: string
-  competencyAverages: TAverageCompetencyScores
-  development?: TDevelopment
-  showTotal?: boolean
+  competencyScores: TCompetencyScores
 }
 
-export const AverageAssessmentsTable = ({
-  pilotName,
-  competencyAverages,
-  development,
-  showTotal = false,
-}: TProps) => {
-  const getTotal = (competencyCode: CompetencyCode) => {
-    return Number(
-      (competencyAverages[competencyCode] ?? 0) + (development?.[competencyCode] ?? 0)
-    ).toFixed(1)
-  }
+export const AverageAssessmentsTable = ({ pilotName, competencyScores }: TProps) => {
   return (
     <div className="bg-white p-6 rounded-lg shadow mb-6">
       <h3 className="text-xl font-semibold mb-4">Общая таблица компетенций {pilotName}</h3>
@@ -29,9 +16,6 @@ export const AverageAssessmentsTable = ({
             <tr className="bg-gray-100">
               <th className="border border-gray-300 px-4 py-2 text-left">Компетенция</th>
               <th className="border border-gray-300 px-4 py-2 text-center">Средняя оценка</th>
-              {showTotal && (
-                <th className="border border-gray-300 px-4 py-2 text-center">Итоговая оценка</th>
-              )}
             </tr>
           </thead>
           <tbody>
@@ -45,19 +29,8 @@ export const AverageAssessmentsTable = ({
                     </div>
                   </td>
                   <td className="border border-gray-300 px-4 py-2 text-center font-bold">
-                    {competencyAverages[competencyCode]}
-                    {!!development?.[competencyCode] && (
-                      <span className="text-xs text-green-500">
-                        {' '}
-                        + {development[competencyCode]}
-                      </span>
-                    )}
+                    {competencyScores[competencyCode]}
                   </td>
-                  {showTotal && (
-                    <td className="border border-gray-300 px-4 py-2 text-center font-bold">
-                      {getTotal(competencyCode)}
-                    </td>
-                  )}
                 </tr>
               )
             })}

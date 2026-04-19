@@ -23,7 +23,7 @@ export type CompetencyScore = {
   score: number | null
 }
 
-export type TAverageCompetencyScores = Record<CompetencyCode, number | null>
+export type TCompetencyScores = Record<CompetencyCode, number | null>
 
 export const COMPETENCIES: Record<CompetencyCode, Competency> = {
   PRO: {

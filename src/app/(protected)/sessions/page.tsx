@@ -9,11 +9,12 @@ import { TExercise } from '@/types/exercises'
 import { TPilot } from '@/types/pilots'
 import { Button } from '@/components/ui/button'
 import { PilotsList } from '@/components/features/instructor/PilotsList'
-import { TPilotAverage } from '@/app/api/average-assessments/route'
+import { TPilotWithAssessments } from '@/app/api/average-assessments/route'
 import { AverageAssessmentsTable } from '@/components/features/profile/AverageAssessmentsTable'
 import { INITIAL_COMPETENCY_SCORES } from '@/constants/initials-competency'
-import { TDevelopments } from '@/app/api/exercises/route'
 import { AddExerciseModal } from '@/components/features/instructor/AddExerciseModal'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 export default function SessionsPage() {
   const { user } = useAuth()
@@ -26,13 +27,13 @@ export default function SessionsPage() {
 
   const [exercises, setExercises] = useState<TExercise[] | null>(null)
 
-  const [developments, setDevelopments] = useState<TDevelopments | null>(null)
-
   const [showAddModal, setShowAddModal] = useState(false)
 
+  const [duration, setDuration] = useState<string>('240')
+
   const [averageAssessments, setAverageAssessments] = useState<{
-    pilot1?: TPilotAverage
-    pilot2?: TPilotAverage
+    pilot1?: TPilotWithAssessments
+    pilot2?: TPilotWithAssessments
   } | null>(null)
 
   const [selectedPilotIdsMap, setSelectedPilotIdsMap] = useState<Record<string, boolean>>({})
@@ -82,7 +83,9 @@ export default function SessionsPage() {
     const pilotIds = Object.keys(selectedPilotIdsMap)
 
     try {
-      const response = await fetch(`/api/exercises?pilot1Id=${pilotIds[0]}&pilot2Id=${pilotIds[1]}`)
+      const response = await fetch(
+        `/api/exercises?pilot1Id=${pilotIds[0]}&pilot2Id=${pilotIds[1]}&duration=${Number(duration)}`
+      )
 
       if (!response.ok) {
         throw new Error('Ошибка при загрузке упражнений')
@@ -90,7 +93,6 @@ export default function SessionsPage() {
 
       const data = await response.json()
       setExercises(data.exercises)
-      setDevelopments(data.developments)
     } catch (error) {
       console.error('Ошибка при загрузке упражнений:', error)
     } finally {
@@ -137,6 +139,10 @@ export default function SessionsPage() {
     fetchExercises()
   }
 
+  const handleChangeDuration = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDuration(e.target.value)
+  }
+
   // Дополнительная проверка, что пользователь - инструктор
   useEffect(() => {
     if (user && user.role !== 'INSTRUCTOR') {
@@ -167,9 +173,20 @@ export default function SessionsPage() {
 
         <div className="mb-6 flex gap-4">
           {!hasPilotsAndExercises && (
-            <Button disabled={isDisabledFetchExercises} onClick={handleClickOnLoadExercises}>
-              Загрузить упражнения
-            </Button>
+            <div className="flex gap-4 flex-col">
+              <div>
+                <Label>Длительность сессии в минутах</Label>
+                <Input
+                  value={duration ?? '240'}
+                  type="string"
+                  placeholder="Введите длительность сессии (в минутах)"
+                  onChange={handleChangeDuration}
+                />
+              </div>
+              <Button disabled={isDisabledFetchExercises} onClick={handleClickOnLoadExercises}>
+                Загрузить упражнения
+              </Button>
+            </div>
           )}
 
           {hasPilotsAndExercises && (
@@ -206,22 +223,18 @@ export default function SessionsPage() {
         {!!averageAssessments && hasPilotsAndExercises && (
           <AverageAssessmentsTable
             pilotName={averageAssessments.pilot1?.pilotName || ''}
-            competencyAverages={
-              averageAssessments.pilot1?.competencyAverages || INITIAL_COMPETENCY_SCORES
+            competencyScores={
+              averageAssessments.pilot1?.competencyScores || INITIAL_COMPETENCY_SCORES
             }
-            development={developments?.[selectedPilotsArray[0].id]}
-            showTotal
           />
         )}
 
         {!!averageAssessments && hasPilotsAndExercises && (
           <AverageAssessmentsTable
             pilotName={averageAssessments.pilot2?.pilotName || ''}
-            competencyAverages={
-              averageAssessments.pilot2?.competencyAverages || INITIAL_COMPETENCY_SCORES
+            competencyScores={
+              averageAssessments.pilot2?.competencyScores || INITIAL_COMPETENCY_SCORES
             }
-            development={developments?.[selectedPilotsArray[1].id]}
-            showTotal
           />
         )}
 

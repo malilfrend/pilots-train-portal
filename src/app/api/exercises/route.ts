@@ -3,11 +3,6 @@ import prisma from '@/lib/prisma'
 import { TExercise } from '@/types/exercises'
 import { CompetencyCode } from '@prisma/client'
 
-type TPilotId = number
-
-export type TDevelopment = Record<CompetencyCode, number>
-export type TDevelopments = Record<TPilotId, TDevelopment>
-
 const ALL_CODES: CompetencyCode[] = ['PRO', 'COM', 'FPA', 'FPM', 'LTW', 'PSD', 'SAW', 'WLM']
 
 const DEFAULT_EXECUTION_TIME = 30

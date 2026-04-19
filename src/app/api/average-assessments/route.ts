@@ -1,58 +1,18 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { CompetencyCode } from '@/types/assessment'
+import { getPilotAssessments } from '@/lib/assessments'
 
-export type TPilotAverage = {
+export type TPilotWithAssessments = {
   pilotId: number
   pilotName: string
-  competencyAverages: Record<CompetencyCode, number | null>
+  competencyScores: Record<CompetencyCode, number | null>
 }
 
 type Response = {
   pilots?: {
-    pilot1?: TPilotAverage
-    pilot2?: TPilotAverage
-  }
-}
-
-const ALL_CODES: CompetencyCode[] = ['PRO', 'COM', 'FPA', 'FPM', 'LTW', 'PSD', 'SAW', 'WLM']
-
-async function getPilotAverages(pilotId: number): Promise<TPilotAverage> {
-  const pilot = await prisma.pilot.findUnique({
-    where: { id: pilotId },
-    include: {
-      profile: {
-        select: {
-          firstName: true,
-          lastName: true,
-        },
-      },
-    },
-  })
-
-  if (!pilot) {
-    throw new Error(`Пилот с id ${pilotId} не найден`)
-  }
-
-  const scores = await prisma.pilotCompetencyScore.findMany({
-    where: { pilotId },
-    select: {
-      competencyCode: true,
-      score: true,
-    },
-  })
-
-  const competencyAverages = {} as Record<CompetencyCode, number | null>
-
-  for (const code of ALL_CODES) {
-    const found = scores.find((s) => s.competencyCode === code)
-    competencyAverages[code] = found ? found.score : null
-  }
-
-  return {
-    pilotId,
-    pilotName: `${pilot.profile.lastName} ${pilot.profile.firstName}`,
-    competencyAverages,
+    pilot1?: TPilotWithAssessments
+    pilot2?: TPilotWithAssessments
   }
 }
 
@@ -70,11 +30,28 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Неверный формат pilot2Id' }, { status: 400 })
     }
 
-    const pilots: { pilot1?: TPilotAverage; pilot2?: TPilotAverage } = {}
+    const pilots: { pilot1?: TPilotWithAssessments; pilot2?: TPilotWithAssessments } = {}
 
     if (pilot1Id) {
       try {
-        pilots.pilot1 = await getPilotAverages(Number(pilot1Id))
+        const pilot1Data = await prisma.pilot.findUnique({
+          where: { id: Number(pilot1Id) },
+          include: {
+            profile: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        })
+        const pilot1Scores = await getPilotAssessments(Number(pilot1Id))
+
+        pilots.pilot1 = {
+          pilotId: Number(pilot1Id),
+          pilotName: `${pilot1Data?.profile.lastName} ${pilot1Data?.profile.firstName}`,
+          competencyScores: pilot1Scores,
+        }
       } catch {
         return NextResponse.json({ error: 'Пилот 1 не найден' }, { status: 404 })
       }
@@ -82,7 +59,24 @@ export async function GET(request: Request) {
 
     if (pilot2Id) {
       try {
-        pilots.pilot2 = await getPilotAverages(Number(pilot2Id))
+        const pilot2Data = await prisma.pilot.findUnique({
+          where: { id: Number(pilot2Id) },
+          include: {
+            profile: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        })
+        const pilot2Scores = await getPilotAssessments(Number(pilot2Id))
+
+        pilots.pilot2 = {
+          pilotId: Number(pilot2Id),
+          pilotName: `${pilot2Data?.profile.lastName} ${pilot2Data?.profile.firstName}`,
+          competencyScores: pilot2Scores,
+        }
       } catch {
         return NextResponse.json({ error: 'Пилот 2 не найден' }, { status: 404 })
       }
