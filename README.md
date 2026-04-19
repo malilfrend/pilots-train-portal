@@ -1,247 +1,314 @@
-# Pilots Training Portal -- архитектура и логика
+# Pilots Training Portal
 
 ## Что это за приложение
 
-Портал для тренировки пилотов. Позволяет:
-- **Инструкторам** -- выставлять оценки пилотам по 8 компетенциям из 4 разных источников
-- **Пилотам** -- просматривать свой профиль, оценки, и получать персонализированную программу тренировок
-- **Системе** -- автоматически генерировать оптимальный набор упражнений для экипажа (1-2 пилота), закрывая дефициты компетенций
+Портал для тренировки пилотов по методологии **Evidence-Based Training (EBT)**. Позволяет:
 
----
+- **Инструкторам** — выставлять оценки пилотам по 8 компетенциям из 4 источников
+- **Пилотам** — просматривать профиль, оценки и персонализированную программу тренировок
+- **Системе** — автоматически генерировать оптимальный набор упражнений для экипажа (1–2 пилота), закрывая дефициты компетенций в рамках заданного бюджета времени
 
-## Общая архитектура
-
-```mermaid
-graph TB
-    subgraph frontend [Frontend -- Next.js App Router]
-        Login[/login]
-        Register[/register]
-        Profile[/profile]
-        Assessments[/assessments]
-        Sessions[/sessions]
-        Weights[/competency-weights]
-    end
-
-    subgraph api [API Routes]
-        AuthAPI["/api/auth/*"]
-        PilotsAPI["/api/pilots"]
-        AssessmentsAPI["/api/assessments"]
-        AvgAPI["/api/average-assessments"]
-        ExercisesAPI["/api/exercises"]
-        WeightsAPI["/api/competency-weights"]
-        ProfileAPI["/api/profile/update"]
-    end
-
-    subgraph db [PostgreSQL]
-        UserProfile
-        Pilot
-        Instructor
-        PilotCompetencyScore
-        Exercise
-        ExerciseCompetency
-        CompetencyWeight
-    end
-
-    subgraph auth [Auth Layer]
-        Middleware["middleware.ts -- JWT verify"]
-        ProtectedLayout["(protected)/layout.tsx -- getSession"]
-    end
-
-    frontend --> auth
-    auth --> api
-    api --> db
-
-    ExercisesAPI -->|"Ключевая ручка"| Optimizer["optimization-js Powell"]
-```
+**Стек:** Next.js 15 (App Router), React 19, TypeScript, Prisma ORM, PostgreSQL, TailwindCSS, shadcn/ui
 
 ---
 
 ## Доменная модель
 
-```mermaid
-erDiagram
-    UserProfile ||--o| Pilot : "has"
-    UserProfile ||--o| Instructor : "has"
-    Pilot ||--o{ PilotCompetencyScore : "has scores"
-    Instructor ||--o{ PilotCompetencyScore : "creates scores"
-    Exercise ||--o{ ExerciseCompetency : "develops"
+### Сущности базы данных
 
-    UserProfile {
-        int id PK
-        string email UK
-        string password
-        UserRole role
-    }
+| Сущность | Ключевые поля | Описание |
+|---|---|---|
+| `UserProfile` | `id`, `email`, `password`, `role` (PILOT / INSTRUCTOR / SUPER_ADMIN) | Базовый пользователь |
+| `Pilot` | `id`, `profileId → UserProfile` | Роль пилота, 1-1 с UserProfile |
+| `Instructor` | `id`, `profileId → UserProfile` | Роль инструктора, 1-1 с UserProfile |
+| `PilotCompetencyScore` | `pilotId`, `instructorId`, `competencyCode`, `sourceType`, `score` (2–5), `comment` | Оценка пилота по одной компетенции из одного источника; уникальна по `(pilotId, competencyCode)` |
+| `Exercise` | `id`, `name`, `executionTime` (мин) | Тренировочное упражнение |
+| `ExerciseCompetency` | `exerciseId`, `competencyCode` | Связь упражнения с компетенциями (many-to-many) |
 
-    Pilot {
-        int id PK
-        int profileId FK
-    }
+### Связи
 
-    Instructor {
-        int id PK
-        int profileId FK
-    }
+```
+UserProfile ──1:1──► Pilot ──1:N──► PilotCompetencyScore ◄──N:1── Instructor
+UserProfile ──1:1──► Instructor
 
-    PilotCompetencyScore {
-        int id PK
-        int pilotId FK
-        int instructorId FK
-        CompetencyCode competencyCode
-        AssessmentSourceType sourceType
-        int score
-        string comment
-    }
-
-    CompetencyWeight {
-        CompetencyCode competencyCode
-        AssessmentSourceType sourceType
-        float weight
-    }
-
-    Exercise {
-        int id PK
-        string name
-    }
-
-    ExerciseCompetency {
-        int exerciseId FK
-        CompetencyCode competencyCode
-    }
+Exercise ──1:N──► ExerciseCompetency
 ```
 
-**8 компетенций пилота** (enum `CompetencyCode`):
-- PRO -- Следование процедурам
-- COM -- Взаимодействие
-- FPA -- Пилотирование (автоматика)
-- FPM -- Пилотирование (ручное)
-- LTW -- Лидерство и командная работа
-- PSD -- Решение проблем
-- SAW -- Ситуационная осознанность
-- WLM -- Управление нагрузкой
+### Компетенции (enum `CompetencyCode`)
 
-**4 источника оценок** (enum `AssessmentSourceType`):
-- PC -- Квалификационная проверка (Proficiency Check)
-- FDM -- Анализ полётных данных (Flight Data Monitoring)
-- EVAL -- Этап оценки (Evaluation Phase)
-- ASR -- Авиационное событие (Aviation Safety Report)
+| Код | Название |
+|---|---|
+| `PRO` | Следование процедурам |
+| `COM` | Взаимодействие |
+| `FPA` | Пилотирование (автоматика) |
+| `FPM` | Пилотирование (ручное) |
+| `LTW` | Лидерство и командная работа |
+| `PSD` | Решение проблем |
+| `SAW` | Ситуационная осознанность |
+| `WLM` | Управление нагрузкой |
+
+### Источники оценок (enum `AssessmentSourceType`)
+
+| Код | Расшифровка |
+|---|---|
+| `PC` | Proficiency Check — квалификационная проверка |
+| `FDM` | Flight Data Monitoring — анализ полётных данных |
+| `EVAL` | Evaluation Phase — этап оценки |
+| `ASR` | Aviation Safety Report — авиационное событие |
+
+---
+
+## Архитектура приложения
+
+### Слои
+
+```
+Browser
+  └── Next.js App Router (src/app/)
+        ├── (auth)/          login, register
+        ├── (protected)/     pilots, sessions, exercise-database, profile
+        └── api/             REST-эндпоинты
+
+  └── Middleware (middleware.ts)
+        JWT-проверка для защищённых маршрутов (/profile/*, /instructor/*)
+
+  └── (protected)/layout.tsx
+        Серверная проверка сессии — редирект на /login при отсутствии
+```
+
+### API-эндпоинты
+
+| Метод | Путь | Описание |
+|---|---|---|
+| `POST` | `/api/auth/login` | Аутентификация, выдача JWT-cookie |
+| `POST` | `/api/auth/register` | Регистрация пользователя |
+| `GET` | `/api/auth/me` | Текущий пользователь из токена |
+| `POST` | `/api/auth/logout` | Сброс cookie |
+| `GET` | `/api/pilots` | Список всех пилотов |
+| `GET/POST` | `/api/assessments` | Оценки пилотов |
+| `GET` | `/api/average-assessments` | Средние оценки по пилотам |
+| `GET /api/pilots/[id]/assessments` | Оценки конкретного пилота |
+| `POST` | `/api/profile/update` | Обновление профиля |
+| `GET` | `/api/exercises` | **Генерация тренировочной программы** (ядро системы) |
+| `PATCH` | `/api/exercises` | Обновление времени выполнения упражнения |
+
+### Аутентификация
+
+- JWT хранится в httpOnly cookie (`token`)
+- `middleware.ts` — edge-проверка маршрутов `/profile/*`, `/instructor/*`
+- `(protected)/layout.tsx` — серверная проверка через `getSession()` для остальных защищённых страниц
 
 ---
 
 ## Ключевая ручка: `GET /api/exercises`
 
-Это ядро приложения -- алгоритм генерации персонализированной тренировочной программы.
+Это ядро системы — алгоритм генерации персонализированной тренировочной программы для экипажа.
 
 ### Входные параметры (query string)
 
-- `pilot1Id`, `pilot2Id` -- ID пилотов (один или оба)
-- `limit` -- количество слотов в программе (по умолчанию 24)
-- `R` -- целевой балл (по умолчанию 3.5)
-- `d` -- приращение за одно упражнение (по умолчанию 0.1)
+| Параметр | Тип | По умолчанию | Описание |
+|---|---|---|---|
+| `pilot1Id` | `number` | — | ID первого пилота |
+| `pilot2Id` | `number` | — | ID второго пилота |
+| `T` | `number` | `240` | Бюджет времени сессии в минутах |
 
-### Алгоритм -- два этапа
+Если ни `pilot1Id`, ни `pilot2Id` не переданы — возвращается полный список упражнений из БД без оптимизации.
 
-```mermaid
-flowchart TD
-    Start["GET /api/exercises?pilot1Id=X&pilot2Id=Y&limit=24&R=3.5&d=0.1"] --> LoadExercises["Загрузка упражнений из БД"]
-    LoadExercises --> NoPilots{Пилоты указаны?}
-    NoPilots -->|Нет| ReturnAll["Вернуть все упражнения как есть"]
-    NoPilots -->|Да| LoadWeights["Загрузка весов компетенций из CompetencyWeight"]
-
-    LoadWeights --> CalcAvg["Расчёт средневзвешенных оценок каждого пилота"]
-    CalcAvg --> CalcDeficits["Расчёт дефицитов: deficit = max(0, R - avg)"]
-
-    CalcDeficits --> Phase1["ЭТАП 1: Жадный отбор -- закрытие дефицитов"]
-
-    Phase1 --> Loop{Есть дефициты > 0 и слоты?}
-    Loop -->|Да| FindVmin["Найти макс. дефицит Vmin"]
-    FindVmin --> FilterUimp["Uimp: упражнения, покрывающие компетенции с Vmin"]
-    FilterUimp --> PickBest["Выбрать лучшее по imp > cover > id"]
-    PickBest --> Apply["Применить: снизить дефициты, трекинг развития, потолок 5.0"]
-    Apply --> Loop
-
-    Loop -->|Нет дефицитов или нет кандидатов| Phase2{"Остались свободные слоты?"}
-
-    Phase2 -->|Нет| ReturnResult["Вернуть exercises + developments"]
-    Phase2 -->|Да| Powell["ЭТАП 2: Оптимизация Powell -- гармоничное развитие"]
-
-    Powell --> BuildMatrix["Построить матрицу A: упражнение x компетенция"]
-    BuildMatrix --> Optimize["Максимизировать soft-min всех оценок"]
-    Optimize --> Round["Округлить до целых с сохранением суммы"]
-    Round --> ApplyPhase2["Применить упражнения этапа 2, трекинг"]
-    ApplyPhase2 --> ReturnResult
-```
-
-### Этап 1 подробно -- жадный алгоритм
-
-Цель: **устранить дефициты** (оценки ниже целевого `R`).
-
-1. Считаем средневзвешенный балл пилота по каждой компетенции. Веса зависят от источника оценки и хранятся в таблице `CompetencyWeight`. Формула:
-
-   `avg(code) = sum(score_i * weight_i) / sum(weight_i)`  для всех источников с оценками
-
-2. Дефицит для пары `(pilot, competency)`:
-
-   `deficit = max(0, R - avg)`
-
-3. Итеративно выбираем лучшее неиспользованное упражнение:
-   - Находим `Vmin` -- максимальный дефицит среди всех пар
-   - `Uimp` -- пул упражнений, покрывающих компетенции с макс. дефицитом И другие дефицитные компетенции
-   - Ранжирование: `imp` (ожидаемый прирост) > `cover` (покрытие дефицитных компетенций) > `id` (стабильная сортировка)
-   - Применяем упражнение: уменьшаем дефицит на `min(deficit, d)`, обновляем текущий балл, потолок 5.0
-
-4. Останавливаемся когда: дефициты = 0, нет кандидатов с imp > 0, или заполнены все слоты
-
-### Этап 2 подробно -- оптимизация Powell
-
-Цель: **гармоничное развитие** -- заполнить оставшиеся слоты так, чтобы поднять самые слабые компетенции.
-
-1. Строится матрица `A[K][M]`: K = кол-во пар (pilot, competency), M = оставшиеся упражнения
-2. `s0` -- текущие оценки после Этапа 1
-3. Целевая функция: максимизация `softMin` всех оценок (мин. оценка должна быть как можно выше)
-4. Метод Powell из `optimization-js` решает непрерывную задачу
-5. Результат округляется до целых чисел с сохранением суммы через банковское округление
-
-### Выход
+### Формат ответа
 
 ```json
 {
   "exercises": [
-    { "id": 1, "name": "...", "competencies": ["PRO", "COM"], "step": "first" },
-    { "id": 5, "name": "...", "competencies": ["FPA"], "step": "second" }
-  ],
-  "developments": {
-    "42": { "PRO": 0.5, "COM": 0.3, "FPA": 0.1 },
-    "43": { "PRO": 0.2, "SAW": 0.4 }
-  }
+    { "id": 1, "name": "Упражнение А", "executionTime": 30, "competencies": ["PRO", "COM"], "step": "first" },
+    { "id": 5, "name": "Упражнение Б", "executionTime": 20, "competencies": ["FPA", "SAW"], "step": "second" }
+  ]
 }
 ```
 
-- `step: "first"` -- упражнения Этапа 1 (закрытие дефицитов)
-- `step: "second"` -- упражнения Этапа 2 (гармонизация)
-- `developments` -- ожидаемый прирост по компетенциям для каждого пилота
+- `step: "first"` — упражнение отобрано на Этапе 1 (покрытие дефицитов)
+- `step: "second"` — упражнение отобрано на Этапе 2 (эффективное использование остатка времени)
+- Если `executionTime` не задано у упражнения — используется значение по умолчанию 30 минут
 
 ---
 
-## Аутентификация и защита
+### Алгоритм: детальное описание
 
-```mermaid
-flowchart LR
-    Browser --> Middleware["Edge Middleware: JWT verify"]
-    Middleware -->|"/profile/*"| ProtectedLayout["(protected)/layout: getSession"]
-    ProtectedLayout -->|"Нет сессии"| Redirect["/login"]
-    ProtectedLayout -->|"OK"| Page["Защищённая страница"]
+#### Шаг 0 — Загрузка данных
 
-    LoginPage -->|"POST /api/auth/login"| AuthAPI["JWT cookie"]
-    AuthAPI --> Browser
+1. Из таблицы `Exercise` (с `ExerciseCompetency`) загружаются все упражнения
+2. Для каждого указанного пилота из `PilotCompetencyScore` загружаются оценки по всем 8 компетенциям
+3. Для отсутствующей оценки подставляется `null`
+
+#### Шаг 1 — Построение приоритетных уровней L1–L4 (`buildPriorityLevels`)
+
+Цель: определить, какие компетенции наиболее дефицитны и требуют первоочередного внимания.
+
+**Алгоритм:**
+
+1. Для каждой из 8 компетенций берётся **минимальная** оценка среди всех указанных пилотов. `null` трактуется как `2` (наихудшая оценка)
+2. Все 8 компетенций сортируются по возрастанию минимальной оценки (tie-break: порядок в `ALL_CODES`)
+3. Отсортированный список делится на 4 квартиля:
+
+```
+Компетенции (отсортированы по min-оценке):  [c1, c2, c3, c4, c5, c6, c7, c8]
+                                              └─── L1 ──┘ └─ L2 ─┘ └ L3 ┘ └L4┘
+                                                (слабейшие)              (сильнейшие)
 ```
 
-- JWT в httpOnly cookie (`token`)
-- `middleware.ts` -- edge-проверка для `/profile/*`, `/instructor/*`
-- `(protected)/layout.tsx` -- серверная проверка сессии для `/assessments`, `/sessions`, `/competency-weights`
+- **L1** — нижний квартиль (самые слабые компетенции, обрабатываются первыми)
+- **L4** — верхний квартиль (наиболее развитые компетенции)
+
+При 8 компетенциях размер квартиля = `ceil(8/4) = 2`. Распределение: L1=[c1,c2], L2=[c3,c4], L3=[c5,c6], L4=[c7,c8].
 
 ---
 
-## Резюме
+#### Этап 1 — Жадный алгоритм покрытия (`stage1CoverageGreedy`)
 
-Портал решает задачу **Evidence-Based Training (EBT)** для авиации: на основе оценок пилота из 4 источников система автоматически генерирует оптимальную тренировочную программу из двух этапов -- сначала жадно закрывает критические дефициты, затем оптимизацией Powell обеспечивает гармоничное развитие всех компетенций.
+Цель: **покрыть как можно больше дефицитных компетенций**, начиная с наиболее слабых (L1 → L4).
+
+**Алгоритм:**
+
+```
+Для каждого уровня L1 → L4:
+  active = компетенции уровня, ещё не покрытые ни одним упражнением
+
+  Пока active не пуст:
+    Для каждого неиспользованного упражнения вычислить:
+      f1 = количество компетенций из active, которые покрывает упражнение
+
+    Выбрать упражнение с максимальным f1
+      Tie-break 1: меньшее executionTime
+      Tie-break 2: меньший id
+
+    Если добавление упражнения превысит бюджет T → немедленная остановка
+    Иначе: добавить упражнение (step='first'), отметить его компетенции как покрытые
+```
+
+**Ключевые детали:**
+- Упражнение не попадает в кандидаты, если у него `f1 = 0` (не покрывает ни одной активной компетенции уровня)
+- Покрытие компетенции переходит между уровнями — если L1 покрыла `PRO`, то в L2 `PRO` уже не попадёт в `active`
+- Остановка при превышении бюджета — жёсткая: упражнение не добавляется, алгоритм завершает Этап 1 целиком
+
+**Результат:** список упражнений с `step='first'`, множество покрытых компетенций, израсходованное время.
+
+---
+
+#### Этап 2 — Жадный алгоритм по эффективности (`stage2EfficiencyGreedy`)
+
+Цель: **заполнить остаток бюджета** упражнениями с наилучшим соотношением покрытия к времени.
+
+**Алгоритм:**
+
+```
+Пока есть время и доступные упражнения:
+  available = упражнения, которые помещаются в оставшееся время (не использованные)
+
+  Если существуют непокрытые компетенции:
+    Приоритет кандидатам, покрывающим хотя бы одну непокрытую компетенцию
+    (Если таких нет — рассматриваем все available)
+    coverageCount = кол-во непокрытых компетенций упражнения
+  Иначе (все покрыты):
+    coverageCount = общее кол-во компетенций упражнения
+
+  f2 = coverageCount / executionTime
+
+  Выбрать упражнение с максимальным f2
+    Tie-break 1: меньшее executionTime
+    Tie-break 2: меньший id
+
+  Добавить упражнение (step='second'), обновить покрытые компетенции и время
+```
+
+**Ключевые детали:**
+- `f2` — показатель эффективности: сколько (непокрытых) компетенций развивается за единицу времени
+- Компетенции отслеживаются локально в рамках Этапа 2 (независимо от Этапа 1)
+- После исчерпания бюджета или кандидатов цикл завершается
+
+---
+
+### Полный поток (без пилотов)
+
+```
+GET /api/exercises  (без параметров)
+  └── prisma.exercise.findMany()
+  └── вернуть { exercises: [...все упражнения...] }
+```
+
+### Полный поток (с пилотами)
+
+```
+GET /api/exercises?pilot1Id=42&pilot2Id=43&T=180
+
+  1. Загрузить все упражнения из БД
+  2. Загрузить оценки pilot=42, pilot=43 из PilotCompetencyScore
+  3. buildPriorityLevels:
+       - для каждой компетенции взять min(score_42, score_43), null→2
+       - отсортировать по возрастанию → L1(слабейшие) … L4(сильнейшие)
+  4. stage1CoverageGreedy(exercises, levels, T=180):
+       - L1: жадно покрыть слабейшие компетенции
+       - L2→L4: покрывать оставшиеся, пока хватает времени
+       → stage1Exercises (step='first'), covered, usedTime
+  5. stage2EfficiencyGreedy(exercises, usedIds, covered, usedTime, T=180):
+       - заполнить остаток бюджета по метрике f2 = coverage/time
+       → stage2Exercises (step='second')
+  6. вернуть { exercises: [...stage1, ...stage2] }
+```
+
+---
+
+### Пример: как влияет `T`
+
+| T (мин) | Поведение |
+|---|---|
+| Маленький (< 30) | Может не поместиться ни одно упражнение → пустой список |
+| Средний (120–180) | Этап 1 закрывает критические дефициты, Этап 2 добирает 1–2 упражнения |
+| Большой (240+) | Этап 1 полностью покрывает все 8 компетенций, Этап 2 оптимально заполняет оставшееся время |
+
+---
+
+## Структура проекта
+
+```
+src/
+├── app/
+│   ├── (auth)/              # login, register — публичные страницы
+│   ├── (protected)/         # pilots, sessions, exercise-database, profile
+│   │   └── layout.tsx       # проверка сессии на сервере
+│   ├── api/                 # REST API (Next.js Route Handlers)
+│   └── middleware.ts        # JWT edge-middleware
+├── components/
+│   ├── ui/                  # shadcn/ui (Button, Input, Table…)
+│   ├── features/            # компоненты фич (AssessmentForm, ExerciseList…)
+│   └── layout/              # Sidebar, Header
+├── lib/
+│   ├── auth.ts              # JWT: createToken, verifyToken, getSession
+│   ├── prisma.ts            # singleton Prisma Client
+│   ├── assessments.ts       # вспомогательные запросы к PilotCompetencyScore
+│   └── validations/auth.ts  # Zod-схемы для login/register
+├── types/
+│   ├── pilots.ts            # TPilot
+│   ├── assessment.ts        # CompetencyCode, TAverageCompetencyScores, COMPETENCIES
+│   ├── exercises.ts         # TExercise
+│   └── forum.ts             # Session, Comment
+├── contexts/
+│   └── auth-context.tsx     # AuthContext — клиентское состояние пользователя
+└── constants/               # общие константы
+```
+
+---
+
+## Запуск
+
+```bash
+# Установка зависимостей
+npm install
+
+# Настройка .env (DATABASE_URL, JWT_SECRET)
+cp .env.example .env
+
+# Миграции БД
+npx prisma migrate dev
+
+# Dev-сервер
+npm run dev
+```
