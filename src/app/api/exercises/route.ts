@@ -2,135 +2,208 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { TExercise } from '@/types/exercises'
 import { CompetencyCode } from '@prisma/client'
-import { optimizeBalancedCountsPowell } from '@/lib/optimization'
-
-type TPilotId = number
-
-export type TDevelopment = Record<CompetencyCode, number>
-export type TDevelopments = Record<TPilotId, TDevelopment>
-type TResponse = { exercises: Array<TExercise>; developments?: TDevelopments }
 
 const ALL_CODES: CompetencyCode[] = ['PRO', 'COM', 'FPA', 'FPM', 'LTW', 'PSD', 'SAW', 'WLM']
 
-async function getPilotAverages(pilotId: number): Promise<Record<CompetencyCode, number | null>> {
+const DEFAULT_EXECUTION_TIME = 30
+const DEFAULT_TOTAL_TIME = 240
+
+type TResponse = { exercises: Array<TExercise> }
+
+async function getPilotScores(pilotId: number): Promise<Record<CompetencyCode, number | null>> {
   const rows = await prisma.pilotCompetencyScore.findMany({
     where: { pilotId },
     select: { competencyCode: true, score: true },
   })
 
-  const avg: Record<CompetencyCode, number | null> = {} as Record<CompetencyCode, number | null>
+  const scores: Record<CompetencyCode, number | null> = {} as Record<CompetencyCode, number | null>
   for (const code of ALL_CODES) {
     const found = rows.find((r) => r.competencyCode === code)
-    avg[code] = found ? found.score : null
+    scores[code] = found ? found.score : null
   }
-  return avg
+  return scores
 }
-
-type TPairKey = string // `${pilotIndex}:${code}`
-
-const getPairKey = (pilotId: number, competencyCode: CompetencyCode): TPairKey =>
-  `${pilotId}:${competencyCode}`
 
 /**
- * @param exerciseCompetencyCodes - массив компетенций, которые развивает упражнение
- * @param deficits - мапа с дефицитами
- * @param d - параметр d
- * @returns ожидаемый прирост
+ * Строит приоритетные уровни L1-L4 по порогам оценок.
+ * Для каждой компетенции берётся минимальная оценка по всем пилотам (null → 2).
+ * L1: score <= 2, L2: 2 < score <= 3, L3: 3 < score <= 4, L4: score > 4.
  */
-function expectedGainForExercise(
-  exerciseCompetencyCodes: CompetencyCode[],
-  deficits: Map<TPairKey, number>,
-  d: number
-): number {
-  let total = 0
+function buildPriorityLevels(
+  pilotScoresMap: Map<number, Record<CompetencyCode, number | null>>
+): CompetencyCode[][] {
+  const levels: CompetencyCode[][] = [[], [], [], []]
 
-  for (const [key, value] of deficits) {
-    if (value <= 0) {
-      continue
+  for (const code of ALL_CODES) {
+    let minScore = Infinity
+    for (const scores of pilotScoresMap.values()) {
+      const s = scores[code] ?? 2
+      if (s < minScore) minScore = s
     }
+    const score = minScore === Infinity ? 2 : minScore
 
-    const code = key.split(':')[1] as CompetencyCode
+    let levelIndex: number
+    if (score <= 2) levelIndex = 0
+    else if (score <= 3) levelIndex = 1
+    else if (score <= 4) levelIndex = 2
+    else levelIndex = 3
 
-    if (exerciseCompetencyCodes.includes(code)) {
-      total += Math.min(value, d)
-    }
+    levels[levelIndex].push(code)
   }
 
-  return Math.round(total * 1000) / 1000
+  return levels
 }
 
-function applyExerciseAndTrack(
-  competencyCodes: CompetencyCode[],
-  deficits: Map<TPairKey, number>,
-  d: number,
-  pilots: number[],
-  track: TDevelopments,
-  currentScores: Map<TPairKey, number>
-) {
-  for (let pilotIndex = 0; pilotIndex < pilots.length; pilotIndex++) {
-    const pilotId = pilots[pilotIndex]
-    if (pilotId == null) continue
-    track[pilotId] ||= {} as TDevelopment
+/**
+ * Этап 1: приоритетный выбор упражнений для дефицитных компетенций.
+ * Обрабатывает уровни L1→L4 последовательно.
+ * Критерий F1: количество покрываемых active-компетенций.
+ * Tie-break: меньше executionTime, затем меньше id.
+ */
+function stage1CoverageGreedy(
+  exercises: TExercise[],
+  levels: CompetencyCode[][],
+  totalTime: number
+): { selected: TExercise[]; covered: Set<CompetencyCode>; usedTime: number } {
+  const selected: TExercise[] = []
+  const covered = new Set<CompetencyCode>()
+  const usedIds = new Set<number>()
+  let usedTime = 0
 
-    for (const code of competencyCodes) {
-      const key = getPairKey(pilotIndex, code)
-      const currentDeficit = deficits.get(key) ?? 0
-      const currentScore = currentScores.get(key) ?? 5
-      const baseIncrement = currentDeficit > 0 ? Math.min(currentDeficit, d) : d
-      const headroom = Math.max(0, 5 - currentScore)
-      const increment = Math.min(baseIncrement, headroom)
+  for (const level of levels) {
+    let active = level.filter((c) => !covered.has(c))
+    if (active.length === 0) continue
 
-      const prev = track[pilotId][code] ?? 0
-      track[pilotId][code] = Math.round((prev + increment) * 10) / 10
+    while (active.length > 0) {
+      let bestExercise: TExercise | null = null
+      let bestF1 = 0
+      let bestTime = Infinity
+      let bestId = Infinity
 
-      if (currentDeficit > 0) {
-        deficits.set(key, Math.max(0, Math.round((currentDeficit - increment) * 1000) / 1000))
+      for (const ex of exercises) {
+        if (usedIds.has(ex.id)) continue
+
+        const exTime = ex.executionTime ?? DEFAULT_EXECUTION_TIME
+        const f1 = ex.competencies.filter((c) => active.includes(c)).length
+        if (f1 === 0) continue
+
+        if (
+          f1 > bestF1 ||
+          (f1 === bestF1 && exTime < bestTime) ||
+          (f1 === bestF1 && exTime === bestTime && ex.id < bestId)
+        ) {
+          bestExercise = ex
+          bestF1 = f1
+          bestTime = exTime
+          bestId = ex.id
+        }
       }
 
-      currentScores.set(key, Math.round((currentScore + increment) * 10) / 10)
-    }
-  }
-}
+      if (!bestExercise) break
 
-const rank = (
-  exercise: TExercise,
-  deficits: Map<TPairKey, number>,
-  d: number,
-  Lcodes: Set<CompetencyCode>
-) => {
-  const imp = expectedGainForExercise(exercise.competencies, deficits, d)
+      const candidateTime = bestExercise.executionTime ?? DEFAULT_EXECUTION_TIME
+      if (usedTime + candidateTime > totalTime) {
+        return { selected, covered, usedTime }
+      }
 
-  return {
-    imp,
-    cover: exercise.competencies.reduce((acc, c) => acc + (Lcodes.has(c) ? 1 : 0), 0),
-  }
-}
+      selected.push({ ...bestExercise, step: 'first' })
+      usedIds.add(bestExercise.id)
+      usedTime += candidateTime
 
-const tryPickBestExercise = (
-  exercisesPool: TExercise[],
-  deficits: Map<TPairKey, number>,
-  d: number,
-  Lcodes: Set<CompetencyCode>
-) => {
-  let bestExercise: TExercise | null = null
-  let bestRank = { imp: 0, cover: 0 }
+      for (const c of bestExercise.competencies) {
+        covered.add(c)
+      }
 
-  for (const exercise of exercisesPool) {
-    const r = rank(exercise, deficits, d, Lcodes)
-
-    if (
-      r.imp > bestRank.imp ||
-      (r.imp === bestRank.imp && r.cover > bestRank.cover) ||
-      (r.imp === bestRank.imp &&
-        r.cover === bestRank.cover &&
-        (bestExercise === null || exercise.id < bestExercise.id))
-    ) {
-      bestExercise = exercise
-      bestRank = r
+      active = level.filter((c) => !covered.has(c))
     }
   }
 
-  return { bestExercise, bestRank }
+  return { selected, covered, usedTime }
+}
+
+/**
+ * Этап 2: рациональное использование оставшегося времени.
+ * Приоритет — непокрытым компетенциям.
+ * Критерий F2: (кол-во непокрытых компетенций) / executionTime.
+ * Если все покрыты: F2 = (общее кол-во компетенций) / executionTime.
+ * Tie-break: меньше executionTime, затем меньше id.
+ */
+function stage2EfficiencyGreedy(
+  exercises: TExercise[],
+  usedIdsFromStage1: Set<number>,
+  covered: Set<CompetencyCode>,
+  usedTime: number,
+  totalTime: number
+): TExercise[] {
+  const selected: TExercise[] = []
+  const usedIds = new Set(usedIdsFromStage1)
+  const coveredSet = new Set(covered)
+
+  while (true) {
+    const remainingTime = totalTime - usedTime
+
+    const available = exercises.filter((ex) => {
+      if (usedIds.has(ex.id)) return false
+      const exTime = ex.executionTime ?? DEFAULT_EXECUTION_TIME
+      return exTime <= remainingTime
+    })
+
+    if (available.length === 0) break
+
+    const uncoveredExist = ALL_CODES.some((c) => !coveredSet.has(c))
+
+    let candidates: TExercise[]
+    if (uncoveredExist) {
+      candidates = available.filter((ex) => ex.competencies.some((c) => !coveredSet.has(c)))
+      if (candidates.length === 0) {
+        candidates = available
+      }
+    } else {
+      candidates = available
+    }
+
+    let bestExercise: TExercise | null = null
+    let bestF2 = -1
+    let bestTime = Infinity
+    let bestId = Infinity
+
+    for (const ex of candidates) {
+      const exTime = ex.executionTime ?? DEFAULT_EXECUTION_TIME
+
+      let coverageCount: number
+      if (uncoveredExist && ex.competencies.some((c) => !coveredSet.has(c))) {
+        coverageCount = ex.competencies.filter((c) => !coveredSet.has(c)).length
+      } else {
+        coverageCount = ex.competencies.length
+      }
+
+      const f2 = coverageCount / exTime
+
+      if (
+        f2 > bestF2 ||
+        (f2 === bestF2 && exTime < bestTime) ||
+        (f2 === bestF2 && exTime === bestTime && ex.id < bestId)
+      ) {
+        bestExercise = ex
+        bestF2 = f2
+        bestTime = exTime
+        bestId = ex.id
+      }
+    }
+
+    if (!bestExercise) break
+
+    const candidateTime = bestExercise.executionTime ?? DEFAULT_EXECUTION_TIME
+    selected.push({ ...bestExercise, step: 'second' })
+    usedIds.add(bestExercise.id)
+    usedTime += candidateTime
+
+    for (const c of bestExercise.competencies) {
+      coveredSet.add(c)
+    }
+  }
+
+  return selected
 }
 
 export async function GET(request: Request) {
@@ -139,10 +212,7 @@ export async function GET(request: Request) {
 
     const pilot1Id = searchParams.get('pilot1Id')
     const pilot2Id = searchParams.get('pilot2Id')
-
-    const limit = Math.max(1, Number(searchParams.get('limit') ?? '24'))
-    const R = Number(searchParams.get('R') ?? '3.5')
-    const d = Number(searchParams.get('d') ?? '0.1')
+    const T = Math.max(1, Number(searchParams.get('T') ?? DEFAULT_TOTAL_TIME))
 
     if (pilot1Id && isNaN(Number(pilot1Id))) {
       return NextResponse.json({ error: 'Неверный формат pilot1Id' }, { status: 400 })
@@ -165,172 +235,40 @@ export async function GET(request: Request) {
       ),
     }))
 
-    // Нет пилотов — отдаём упражнения как есть
     if (!pilot1Id && !pilot2Id) {
       return NextResponse.json({ exercises: allExercises } as TResponse)
     }
 
-    // Считаем дефициты по парам (pilot, code)
-    const deficits = new Map<TPairKey, number>()
+    const pilots: number[] = []
+    if (pilot1Id) pilots.push(Number(pilot1Id))
+    if (pilot2Id) pilots.push(Number(pilot2Id))
 
-    const pilots: Array<number> = []
-
-    if (pilot1Id) {
-      pilots.push(Number(pilot1Id))
-    }
-    if (pilot2Id) {
-      pilots.push(Number(pilot2Id))
+    const pilotScoresMap = new Map<number, Record<CompetencyCode, number | null>>()
+    for (const pid of pilots) {
+      pilotScoresMap.set(pid, await getPilotScores(pid))
     }
 
-    for (let pilotIndex = 0; pilotIndex < pilots.length; pilotIndex++) {
-      const pilotAverages = await getPilotAverages(pilots[pilotIndex])
+    const levels = buildPriorityLevels(pilotScoresMap)
 
-      for (const code of ALL_CODES) {
-        const averageScore = pilotAverages[code]
+    const {
+      selected: stage1Exercises,
+      covered,
+      usedTime,
+    } = stage1CoverageGreedy(allExercises, levels, T)
 
-        deficits.set(getPairKey(pilotIndex, code), Math.max(0, R - (averageScore ?? R)))
-      }
-    }
+    const usedIdsFromStage1 = new Set(stage1Exercises.map((ex) => ex.id))
 
-    // Итеративный отбор на limit слотов
-    const selectedExercises: TExercise[] = []
-    const usedExerciseIds = new Set<number>()
-    const developments: TDevelopments = {}
+    const stage2Exercises = stage2EfficiencyGreedy(
+      allExercises,
+      usedIdsFromStage1,
+      covered,
+      usedTime,
+      T
+    )
 
-    // Текущие оценки для учёта потолка 5 баллов
-    const currentScores = new Map<TPairKey, number>()
-    for (let pilotIndex = 0; pilotIndex < pilots.length; pilotIndex++) {
-      const pilotAverages = await getPilotAverages(pilots[pilotIndex])
-      for (const code of ALL_CODES) {
-        const avg = pilotAverages[code]
-        currentScores.set(getPairKey(pilotIndex, code), typeof avg === 'number' ? avg : 0)
-      }
-    }
+    const exercises = [...stage1Exercises, ...stage2Exercises]
 
-    while (selectedExercises.length < limit) {
-      // L — пары с дефицитом > 0
-      const L = [...deficits.entries()].filter(([, val]) => val > 0)
-
-      if (L.length === 0) {
-        break
-      }
-
-      const Vmin = Math.max(...L.map(([, val]) => val))
-      const Lmin = L.filter(([, val]) => val === Vmin).map(([k]) => k)
-      const Lcodes = new Set(L.map(([k]) => k.split(':')[1] as CompetencyCode))
-      const LminCodes = new Set(Lmin.map((k) => k.split(':')[1] as CompetencyCode))
-
-      const Uimp = allExercises.filter(
-        (exercise) =>
-          !usedExerciseIds.has(exercise.id) &&
-          exercise.competencies.some((c) => LminCodes.has(c)) &&
-          exercise.competencies.some((c) => Lcodes.has(c))
-      )
-
-      let candidate: TExercise | null = null
-      let best = { imp: 0, cover: 0 }
-
-      if (Uimp.length > 0) {
-        const { bestExercise, bestRank } = tryPickBestExercise(Uimp, deficits, d, Lcodes)
-        candidate = bestExercise
-        best = bestRank
-      } else {
-        const LminSet = new Set<CompetencyCode>([...LminCodes])
-        const filterUti = (ex: TExercise) =>
-          !usedExerciseIds.has(ex.id) && ex.competencies.some((c) => LminSet.has(c))
-        const Uti = allExercises.filter(filterUti).sort((a, b) => a.id - b.id)
-
-        if (Uti.length > 0) {
-          const { bestExercise, bestRank } = tryPickBestExercise(Uti, deficits, d, Lcodes)
-          candidate = bestExercise
-          best = bestRank
-        } else {
-          const { bestExercise, bestRank } = tryPickBestExercise(
-            allExercises.filter((ex) => !usedExerciseIds.has(ex.id)).sort((a, b) => a.id - b.id),
-            deficits,
-            d,
-            Lcodes
-          )
-          candidate = bestExercise
-          best = bestRank
-        }
-      }
-
-      if (!candidate) {
-        break
-      }
-      if (best.imp <= 0) {
-        break
-      }
-
-      selectedExercises.push({ ...candidate, step: 'first' })
-      usedExerciseIds.add(candidate.id)
-      applyExerciseAndTrack(
-        candidate.competencies,
-        deficits,
-        d,
-        pilots,
-        developments,
-        currentScores
-      )
-    }
-
-    // Этап 2: гармоничное развитие — распределим оставшиеся слоты оптимизацией
-    const remaining = limit - selectedExercises.length
-    if (remaining > 0) {
-      const exercisesLeft = allExercises
-        .filter((ex) => !usedExerciseIds.has(ex.id))
-        .sort((a, b) => a.id - b.id)
-      if (exercisesLeft.length > 0) {
-        const pairs: Array<{ pilotIndex: number; code: CompetencyCode }> = []
-        for (let pilotIndex = 0; pilotIndex < pilots.length; pilotIndex++) {
-          for (const code of ALL_CODES) pairs.push({ pilotIndex, code })
-        }
-
-        const K = pairs.length
-        const M = exercisesLeft.length
-
-        const A: number[][] = Array.from({ length: K }, () => Array(M).fill(0))
-        for (let k = 0; k < K; k++) {
-          const code = pairs[k].code
-          for (let j = 0; j < M; j++) {
-            A[k][j] = exercisesLeft[j].competencies.includes(code) ? 1 : 0
-          }
-        }
-
-        const s0: number[] = pairs.map(({ pilotIndex, code }) => {
-          const v = currentScores.get(getPairKey(pilotIndex, code))
-          return typeof v === 'number' ? v : 0
-        })
-
-        const { counts } = optimizeBalancedCountsPowell({
-          A,
-          s0,
-          d,
-          L: remaining,
-          gamma: 10,
-          lambda: 2000,
-        })
-
-        for (let j = 0; j < M; j++) {
-          const ex = exercisesLeft[j]
-          const c = counts[j] ?? 0
-          for (let t = 0; t < c; t++) {
-            if (selectedExercises.length >= limit) {
-              break
-            }
-            selectedExercises.push({ ...ex, step: 'second' })
-            usedExerciseIds.add(ex.id)
-            applyExerciseAndTrack(ex.competencies, deficits, d, pilots, developments, currentScores)
-          }
-          if (selectedExercises.length >= limit) {
-            break
-          }
-        }
-      }
-    }
-
-    return NextResponse.json({ exercises: selectedExercises, developments } as TResponse)
+    return NextResponse.json({ exercises } as TResponse)
   } catch (error) {
     console.error('Error fetching exercises:', error)
     return NextResponse.json({ error: 'Внутренняя ошибка сервера' }, { status: 500 })

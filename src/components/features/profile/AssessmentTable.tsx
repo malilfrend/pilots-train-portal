@@ -1,11 +1,11 @@
 'use client'
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
-import { COMPETENCIES, CompetencyCode, TAverageCompetencyScores } from '@/types/assessment'
+import { COMPETENCIES, CompetencyCode, TCompetencyScores } from '@/types/assessment'
 
 interface AssessmentTableProps {
   title: string
-  scores: TAverageCompetencyScores | null
+  scores: TCompetencyScores | null
 }
 
 export function AssessmentTable({ title, scores }: AssessmentTableProps) {
