@@ -9,7 +9,7 @@ import { TExercise } from '@/types/exercises'
 import { TPilot } from '@/types/pilots'
 import { Button } from '@/components/ui/button'
 import { PilotsList } from '@/components/features/instructor/PilotsList'
-import { TPilotWithAssessments } from '@/app/api/average-assessments/route'
+import { TMinCompetencyScores, TPilotWithAssessments } from '@/app/api/average-assessments/route'
 import { AverageAssessmentsTable } from '@/components/features/profile/AverageAssessmentsTable'
 import { INITIAL_COMPETENCY_SCORES } from '@/constants/initials-competency'
 import { AddExerciseModal } from '@/components/features/instructor/AddExerciseModal'
@@ -35,6 +35,8 @@ export default function SessionsPage() {
     pilot1?: TPilotWithAssessments
     pilot2?: TPilotWithAssessments
   } | null>(null)
+
+  const [minCompetencyScores, setMinCompetencyScores] = useState<TMinCompetencyScores | null>(null)
 
   const [selectedPilotIdsMap, setSelectedPilotIdsMap] = useState<Record<string, boolean>>({})
 
@@ -75,6 +77,8 @@ export default function SessionsPage() {
   const handleChooseOtherPilots = () => {
     setSelectedPilotIdsMap({})
     setExercises(null)
+    setAverageAssessments(null)
+    setMinCompetencyScores(null)
   }
 
   const fetchExercises = async () => {
@@ -132,11 +136,12 @@ export default function SessionsPage() {
 
     const data = await response.json()
     setAverageAssessments(data.pilots)
+    setMinCompetencyScores(data.minCompetencyScores ?? null)
   }
 
-  const handleClickOnLoadExercises = () => {
-    fetchAverageAssessments()
-    fetchExercises()
+  const handleClickOnLoadExercises = async () => {
+    await fetchAverageAssessments()
+    await fetchExercises()
   }
 
   const handleChangeDuration = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -222,7 +227,7 @@ export default function SessionsPage() {
 
         {!!averageAssessments && hasPilotsAndExercises && (
           <AverageAssessmentsTable
-            pilotName={averageAssessments.pilot1?.pilotName || ''}
+            tableName={averageAssessments.pilot1?.pilotName || ''}
             competencyScores={
               averageAssessments.pilot1?.competencyScores || INITIAL_COMPETENCY_SCORES
             }
@@ -231,10 +236,17 @@ export default function SessionsPage() {
 
         {!!averageAssessments && hasPilotsAndExercises && (
           <AverageAssessmentsTable
-            pilotName={averageAssessments.pilot2?.pilotName || ''}
+            tableName={averageAssessments.pilot2?.pilotName || ''}
             competencyScores={
               averageAssessments.pilot2?.competencyScores || INITIAL_COMPETENCY_SCORES
             }
+          />
+        )}
+
+        {!!minCompetencyScores && hasPilotsAndExercises && (
+          <AverageAssessmentsTable
+            tableName="Минимальная оценка по паре пилотов"
+            competencyScores={minCompetencyScores}
           />
         )}
 

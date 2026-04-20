@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { CompetencyCode } from '@/types/assessment'
+import { COMPETENCIES_CODES, CompetencyCode } from '@/types/assessment'
 import { getPilotAssessments } from '@/lib/assessments'
 
 export type TPilotWithAssessments = {
@@ -9,11 +9,14 @@ export type TPilotWithAssessments = {
   competencyScores: Record<CompetencyCode, number | null>
 }
 
+export type TMinCompetencyScores = Record<CompetencyCode, number | null>
+
 type Response = {
   pilots?: {
     pilot1?: TPilotWithAssessments
     pilot2?: TPilotWithAssessments
   }
+  minCompetencyScores?: TMinCompetencyScores
 }
 
 export async function GET(request: Request) {
@@ -82,8 +85,24 @@ export async function GET(request: Request) {
       }
     }
 
+    let minCompetencyScores: TMinCompetencyScores | undefined
+    if (pilots.pilot1 && pilots.pilot2) {
+      const scores1 = pilots.pilot1.competencyScores
+      const scores2 = pilots.pilot2.competencyScores
+      minCompetencyScores = COMPETENCIES_CODES.reduce((acc, code) => {
+        const s1 = scores1[code]
+        const s2 = scores2[code]
+        if (s1 == null && s2 == null) acc[code] = null
+        else if (s1 == null) acc[code] = s2
+        else if (s2 == null) acc[code] = s1
+        else acc[code] = Math.min(s1, s2)
+        return acc
+      }, {} as TMinCompetencyScores)
+    }
+
     const response: Response = {
       ...(Object.keys(pilots).length > 0 && { pilots }),
+      ...(minCompetencyScores && { minCompetencyScores }),
     }
 
     return NextResponse.json(response)
