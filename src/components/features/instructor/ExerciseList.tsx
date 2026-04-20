@@ -22,26 +22,34 @@ export function ExerciseList({ exercises, onDelete }: TProps) {
       {exercises.map((exercise, idx) => (
         <div
           key={`${exercise.id}-${idx}`}
-          className="bg-white p-6 rounded-lg shadow border hover:shadow-md transition-shadow relative"
+          className="bg-white p-4 rounded-lg shadow border hover:shadow-md transition-shadow relative"
         >
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex items-center gap-2">
+          <div className="flex-col justify-between items-start mb-4">
+            <div className="flex items-center gap-2 justify-between w-full mb-2">
               <span className="text-xs text-gray-400 font-mono">#{idx + 1}</span>
-              <h3 className="text-lg font-semibold text-gray-900">{exercise.name}</h3>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                ID: {exercise.id}
-              </span>
               {onDelete && (
                 <button
                   type="button"
-                  className="px-2 py-1 text-xs text-red-600 border border-red-300 rounded hover:bg-red-50 transition-colors"
+                  className="px-2 py-1 text-xs text-red-600 border border-red-300 rounded hover:bg-red-50 transition-colors self-end"
                   onClick={() => onDelete(idx)}
                 >
                   Удалить
                 </button>
               )}
+            </div>
+
+            <h3 className="text-lg font-semibold text-gray-900 max-w-[100%] mb-2">
+              {exercise.name}
+            </h3>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-600 font-mono">
+                Duration: {exercise.executionTime ? `${exercise.executionTime} min` : '—'}
+              </span>
+              <span>|</span>
+              <span className="text-sm text-gray-500 bg-gray-100 px-2 rounded">
+                id: {exercise.id}
+              </span>
             </div>
           </div>
 

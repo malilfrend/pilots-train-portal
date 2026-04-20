@@ -1,20 +1,28 @@
 'use client'
 
 import { ClientAuthGuard } from '@/components/features/auth/ClientAuthGuard'
+import { ExerciseModal } from '@/components/features/instructor/ExerciseModal'
 import { useAuth } from '@/contexts/auth-context'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { TExercise } from '@/types/exercises'
 import { COMPETENCIES, CompetencyCode } from '@/types/assessment'
 
+type ModalState = { mode: 'create' } | { mode: 'edit'; exercise: TExercise } | null
+
 export default function ExerciseDatabasePage() {
   const { user } = useAuth()
   const router = useRouter()
   const [exercises, setExercises] = useState<TExercise[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [editingId, setEditingId] = useState<number | null>(null)
-  const [editValue, setEditValue] = useState<string>('')
-  const [savingId, setSavingId] = useState<number | null>(null)
+  const [showScrollTop, setShowScrollTop] = useState(false)
+  const [modalState, setModalState] = useState<ModalState>(null)
+
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 300)
+    window.addEventListener('scroll', onScroll)
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   const fetchExercises = async () => {
     setIsLoading(true)
@@ -30,38 +38,14 @@ export default function ExerciseDatabasePage() {
     }
   }
 
-  const handleStartEdit = (exercise: TExercise) => {
-    setEditingId(exercise.id)
-    setEditValue(exercise.executionTime?.toString() ?? '')
+  const handleSaved = () => {
+    setModalState(null)
+    fetchExercises()
   }
 
-  const handleSave = async (exerciseId: number) => {
-    setSavingId(exerciseId)
-    try {
-      const executionTime = editValue === '' ? null : parseInt(editValue)
-
-      const response = await fetch('/api/exercises', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: exerciseId, executionTime }),
-      })
-
-      if (!response.ok) throw new Error('Ошибка при сохранении')
-
-      setExercises((prev) =>
-        prev.map((ex) => (ex.id === exerciseId ? { ...ex, executionTime } : ex))
-      )
-      setEditingId(null)
-    } catch (error) {
-      console.error('Ошибка при сохранении:', error)
-    } finally {
-      setSavingId(null)
-    }
-  }
-
-  const handleCancel = () => {
-    setEditingId(null)
-    setEditValue('')
+  const handleDeleted = () => {
+    setModalState(null)
+    fetchExercises()
   }
 
   useEffect(() => {
@@ -79,11 +63,19 @@ export default function ExerciseDatabasePage() {
   return (
     <ClientAuthGuard>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">База упражнений</h1>
-          <p className="mt-2 text-gray-600">
-            Все доступные упражнения с компетенциями и временем выполнения
-          </p>
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">База упражнений</h1>
+            <p className="mt-2 text-gray-600">
+              Все доступные упражнения с компетенциями и временем выполнения
+            </p>
+          </div>
+          <button
+            onClick={() => setModalState({ mode: 'create' })}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap"
+          >
+            + Создать упражнение
+          </button>
         </div>
 
         {isLoading ? (
@@ -97,7 +89,7 @@ export default function ExerciseDatabasePage() {
                 <thead>
                   <tr className="bg-gray-100">
                     <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold">
-                      #
+                      ID
                     </th>
                     <th className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold">
                       Название упражнения
@@ -114,9 +106,9 @@ export default function ExerciseDatabasePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {exercises.map((exercise, index) => (
+                  {exercises.map((exercise) => (
                     <tr key={exercise.id} className="hover:bg-gray-50">
-                      <td className="border border-gray-300 px-4 py-2 text-sm">{index + 1}</td>
+                      <td className="border border-gray-300 px-4 py-2 text-sm">{exercise.id}</td>
                       <td className="border border-gray-300 px-4 py-2 text-sm">{exercise.name}</td>
                       <td className="border border-gray-300 px-4 py-2 text-sm">
                         <div className="flex flex-wrap gap-1">
@@ -132,49 +124,15 @@ export default function ExerciseDatabasePage() {
                         </div>
                       </td>
                       <td className="border border-gray-300 px-4 py-2 text-center text-sm">
-                        {editingId === exercise.id ? (
-                          <input
-                            type="number"
-                            min={0}
-                            className="w-20 p-1 border rounded text-center"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSave(exercise.id)
-                              if (e.key === 'Escape') handleCancel()
-                            }}
-                            // eslint-disable-next-line jsx-a11y/no-autofocus
-                            autoFocus
-                          />
-                        ) : (
-                          <span>{exercise.executionTime ?? '—'}</span>
-                        )}
+                        <span>{exercise.executionTime ?? '—'}</span>
                       </td>
                       <td className="border border-gray-300 px-4 py-2 text-center text-sm">
-                        {editingId === exercise.id ? (
-                          <div className="flex justify-center gap-2">
-                            <button
-                              className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:bg-green-400"
-                              onClick={() => handleSave(exercise.id)}
-                              disabled={savingId === exercise.id}
-                            >
-                              {savingId === exercise.id ? '...' : 'Сохранить'}
-                            </button>
-                            <button
-                              className="px-3 py-1 border border-gray-300 text-xs rounded hover:bg-gray-50"
-                              onClick={handleCancel}
-                            >
-                              Отмена
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-                            onClick={() => handleStartEdit(exercise)}
-                          >
-                            Редактировать
-                          </button>
-                        )}
+                        <button
+                          className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                          onClick={() => setModalState({ mode: 'edit', exercise })}
+                        >
+                          Редактировать
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -184,6 +142,24 @@ export default function ExerciseDatabasePage() {
           </div>
         )}
       </div>
+      {showScrollTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-6 right-6 z-50 px-4 py-2 bg-blue-600 text-white text-sm rounded-full shadow-lg hover:bg-blue-700"
+          aria-label="Наверх"
+        >
+          ↑ Наверх
+        </button>
+      )}
+      {modalState && (
+        <ExerciseModal
+          mode={modalState.mode}
+          exercise={modalState.mode === 'edit' ? modalState.exercise : undefined}
+          onClose={() => setModalState(null)}
+          onSaved={handleSaved}
+          onDeleted={handleDeleted}
+        />
+      )}
     </ClientAuthGuard>
   )
 }

@@ -223,7 +223,7 @@ export async function GET(request: Request) {
 
     const exercisesFromDB = await prisma.exercise.findMany({
       include: { competencies: true },
-      orderBy: { name: 'asc' },
+      orderBy: { id: 'asc' },
     })
 
     const allExercises: TExercise[] = exercisesFromDB.map((exercise) => ({
@@ -275,24 +275,59 @@ export async function GET(request: Request) {
   }
 }
 
-// Обновление времени выполнения упражнения
+function validateCompetencies(value: unknown): value is CompetencyCode[] {
+  return Array.isArray(value) && value.every((c) => ALL_CODES.includes(c as CompetencyCode))
+}
+
+// Обновление упражнения (name, executionTime, competencies)
 export async function PATCH(request: Request) {
   try {
     const data = await request.json()
-    const { id, executionTime } = data
+    const { id, name, executionTime, competencies } = data
 
     if (!id || typeof id !== 'number') {
       return NextResponse.json({ error: 'Неверный формат id' }, { status: 400 })
     }
 
-    if (executionTime !== null && (typeof executionTime !== 'number' || executionTime < 0)) {
+    if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
+      return NextResponse.json({ error: 'Неверный формат name' }, { status: 400 })
+    }
+
+    if (
+      executionTime !== undefined &&
+      executionTime !== null &&
+      (typeof executionTime !== 'number' || executionTime < 0)
+    ) {
       return NextResponse.json({ error: 'Неверный формат executionTime' }, { status: 400 })
     }
 
-    const exercise = await prisma.exercise.update({
-      where: { id },
-      data: { executionTime },
-      include: { competencies: true },
+    if (competencies !== undefined && !validateCompetencies(competencies)) {
+      return NextResponse.json({ error: 'Неверный формат competencies' }, { status: 400 })
+    }
+
+    const updateData: { name?: string; executionTime?: number | null } = {}
+    if (name !== undefined) updateData.name = name.trim()
+    if (executionTime !== undefined) updateData.executionTime = executionTime
+
+    const exercise = await prisma.$transaction(async (tx) => {
+      if (Object.keys(updateData).length > 0) {
+        await tx.exercise.update({ where: { id }, data: updateData })
+      }
+      if (competencies !== undefined) {
+        await tx.exerciseCompetency.deleteMany({ where: { exerciseId: id } })
+        if (competencies.length > 0) {
+          await tx.exerciseCompetency.createMany({
+            data: competencies.map((competencyCode: CompetencyCode) => ({
+              exerciseId: id,
+              competencyCode,
+            })),
+          })
+        }
+      }
+      return tx.exercise.findUniqueOrThrow({
+        where: { id },
+        include: { competencies: true },
+      })
     })
 
     return NextResponse.json({
@@ -303,6 +338,76 @@ export async function PATCH(request: Request) {
     })
   } catch (error) {
     console.error('Error updating exercise:', error)
+    return NextResponse.json({ error: 'Внутренняя ошибка сервера' }, { status: 500 })
+  }
+}
+
+// Создание упражнения
+export async function POST(request: Request) {
+  try {
+    const data = await request.json()
+    const { name, executionTime, competencies } = data
+
+    if (typeof name !== 'string' || name.trim() === '') {
+      return NextResponse.json({ error: 'Неверный формат name' }, { status: 400 })
+    }
+
+    if (
+      executionTime !== undefined &&
+      executionTime !== null &&
+      (typeof executionTime !== 'number' || executionTime < 0)
+    ) {
+      return NextResponse.json({ error: 'Неверный формат executionTime' }, { status: 400 })
+    }
+
+    if (!validateCompetencies(competencies ?? [])) {
+      return NextResponse.json({ error: 'Неверный формат competencies' }, { status: 400 })
+    }
+
+    const codes: CompetencyCode[] = competencies ?? []
+
+    const exercise = await prisma.exercise.create({
+      data: {
+        name: name.trim(),
+        executionTime: executionTime ?? null,
+        competencies: {
+          create: codes.map((competencyCode) => ({ competencyCode })),
+        },
+      },
+      include: { competencies: true },
+    })
+
+    return NextResponse.json({
+      id: exercise.id,
+      name: exercise.name,
+      executionTime: exercise.executionTime,
+      competencies: exercise.competencies.map((c) => c.competencyCode),
+    })
+  } catch (error) {
+    console.error('Error creating exercise:', error)
+    return NextResponse.json({ error: 'Внутренняя ошибка сервера' }, { status: 500 })
+  }
+}
+
+// Удаление упражнения
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const idParam = searchParams.get('id')
+    const id = Number(idParam)
+
+    if (!idParam || isNaN(id)) {
+      return NextResponse.json({ error: 'Неверный формат id' }, { status: 400 })
+    }
+
+    await prisma.$transaction([
+      prisma.exerciseCompetency.deleteMany({ where: { exerciseId: id } }),
+      prisma.exercise.delete({ where: { id } }),
+    ])
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting exercise:', error)
     return NextResponse.json({ error: 'Внутренняя ошибка сервера' }, { status: 500 })
   }
 }
