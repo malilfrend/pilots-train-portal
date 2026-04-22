@@ -15,6 +15,7 @@ import { INITIAL_COMPETENCY_SCORES } from '@/constants/initials-competency'
 import { AddExerciseModal } from '@/components/features/instructor/AddExerciseModal'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ScrollToTopButton } from '@/components/ui/scroll-to-top-button'
 
 export default function SessionsPage() {
   const { user } = useAuth()
@@ -74,6 +75,11 @@ export default function SessionsPage() {
 
   const exerciseIds = useMemo(() => new Set(exercises?.map((ex) => ex.id) ?? []), [exercises])
 
+  const totalExercisesTime = useMemo(
+    () => exercises?.reduce((sum, ex) => sum + (ex.executionTime ?? 0), 0) ?? 0,
+    [exercises]
+  )
+
   const handleChooseOtherPilots = () => {
     setSelectedPilotIdsMap({})
     setExercises(null)
@@ -88,7 +94,7 @@ export default function SessionsPage() {
 
     try {
       const response = await fetch(
-        `/api/exercises?pilot1Id=${pilotIds[0]}&pilot2Id=${pilotIds[1]}&duration=${Number(duration)}`
+        `/api/exercises?pilot1Id=${pilotIds[0]}&pilot2Id=${pilotIds[1]}&T=${Number(duration)}`
       )
 
       if (!response.ok) {
@@ -256,6 +262,9 @@ export default function SessionsPage() {
               <Button onClick={() => setShowAddModal(true)}>Добавить упражнение</Button>
             </div>
             <ExerciseList exercises={exercises} onDelete={handleDeleteExercise} />
+            <div className="mt-4 text-gray-900">
+              Общее время упражнений: {totalExercisesTime} из {duration} минут
+            </div>
           </>
         )}
 
@@ -266,6 +275,7 @@ export default function SessionsPage() {
             onClose={() => setShowAddModal(false)}
           />
         )}
+        <ScrollToTopButton />
       </div>
     </ClientAuthGuard>
   )

@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { TExercise } from '@/types/exercises'
 import { COMPETENCIES, CompetencyCode } from '@/types/assessment'
+import { ScrollToTopButton } from '@/components/ui/scroll-to-top-button'
 
 type ModalState = { mode: 'create' } | { mode: 'edit'; exercise: TExercise } | null
 
@@ -15,14 +16,7 @@ export default function ExerciseDatabasePage() {
   const router = useRouter()
   const [exercises, setExercises] = useState<TExercise[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [showScrollTop, setShowScrollTop] = useState(false)
   const [modalState, setModalState] = useState<ModalState>(null)
-
-  useEffect(() => {
-    const onScroll = () => setShowScrollTop(window.scrollY > 300)
-    window.addEventListener('scroll', onScroll)
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
 
   const fetchExercises = async () => {
     setIsLoading(true)
@@ -142,15 +136,7 @@ export default function ExerciseDatabasePage() {
           </div>
         )}
       </div>
-      {showScrollTop && (
-        <button
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-6 right-6 z-50 px-4 py-2 bg-blue-600 text-white text-sm rounded-full shadow-lg hover:bg-blue-700"
-          aria-label="Наверх"
-        >
-          ↑ Наверх
-        </button>
-      )}
+      <ScrollToTopButton />
       {modalState && (
         <ExerciseModal
           mode={modalState.mode}
