@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { ReactNode, useState } from 'react'
 import { COMPETENCIES, CompetencyCode, TCompetencyScores } from '@/types/assessment'
 
 type TProps = {
-  tableName: string
+  tableName: ReactNode
   competencyScores: TCompetencyScores
   defaultCollapsed?: boolean
 }

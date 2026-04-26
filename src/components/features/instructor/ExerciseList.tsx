@@ -50,6 +50,28 @@ export function ExerciseList({ exercises, onDelete }: TProps) {
               <span className="text-sm text-gray-500 bg-gray-100 px-2 rounded">
                 id: {exercise.id}
               </span>
+              {exercise.pilot && (
+                <>
+                  <span>|</span>
+                  <span className="inline-flex items-center gap-1 text-xs font-medium">
+                    <span className="px-2 py-0.5 rounded bg-sky-100 text-sky-800 border border-sky-200">
+                      Пилот {exercise.pilot}
+                    </span>
+                    {exercise.role && (
+                      <span
+                        className={
+                          'px-2 py-0.5 rounded border ' +
+                          (exercise.role === 'PF'
+                            ? 'bg-amber-100 text-amber-800 border-amber-200'
+                            : 'bg-slate-100 text-slate-700 border-slate-200')
+                        }
+                      >
+                        {exercise.role}
+                      </span>
+                    )}
+                  </span>
+                </>
+              )}
             </div>
           </div>
 
