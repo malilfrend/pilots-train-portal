@@ -233,7 +233,14 @@ export default function SessionsPage() {
 
         {!!averageAssessments && hasPilotsAndExercises && (
           <AverageAssessmentsTable
-            tableName={averageAssessments.pilot1?.pilotName || ''}
+            tableName={
+              <span className="inline-flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded bg-sky-100 text-sky-800 border border-sky-200 text-sm font-medium">
+                  Пилот 1
+                </span>
+                {averageAssessments.pilot1?.pilotName || ''}
+              </span>
+            }
             competencyScores={
               averageAssessments.pilot1?.competencyScores || INITIAL_COMPETENCY_SCORES
             }
@@ -242,7 +249,14 @@ export default function SessionsPage() {
 
         {!!averageAssessments && hasPilotsAndExercises && (
           <AverageAssessmentsTable
-            tableName={averageAssessments.pilot2?.pilotName || ''}
+            tableName={
+              <span className="inline-flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded bg-sky-100 text-sky-800 border border-sky-200 text-sm font-medium">
+                  Пилот 2
+                </span>
+                {averageAssessments.pilot2?.pilotName || ''}
+              </span>
+            }
             competencyScores={
               averageAssessments.pilot2?.competencyScores || INITIAL_COMPETENCY_SCORES
             }

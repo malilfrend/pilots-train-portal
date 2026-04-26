@@ -6,4 +6,6 @@ export type TExercise = {
   executionTime?: number | null
   competencies: Array<CompetencyCode>
   step?: 'first' | 'second'
+  pilot?: 1 | 2
+  role?: 'PF' | 'PM'
 }

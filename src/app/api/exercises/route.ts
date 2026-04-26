@@ -24,186 +24,208 @@ async function getPilotScores(pilotId: number): Promise<Record<CompetencyCode, n
   return scores
 }
 
-/**
- * Строит приоритетные уровни L1-L4 по порогам оценок.
- * Для каждой компетенции берётся минимальная оценка по всем пилотам (null → 2).
- * L1: score <= 2, L2: 2 < score <= 3, L3: 3 < score <= 4, L4: score > 4.
- */
-function buildPriorityLevels(
-  pilotScoresMap: Map<number, Record<CompetencyCode, number | null>>
-): CompetencyCode[][] {
-  const levels: CompetencyCode[][] = [[], [], [], []]
+type PilotKey = 1 | 2
+type DeficitLevel = 2 | 3 | 4
+type DeficitsByLevel = Record<DeficitLevel, CompetencyCode[]>
 
+const DEFICIT_LEVELS: DeficitLevel[] = [2, 3, 4]
+
+function buildPilotDeficits(scores: Record<CompetencyCode, number | null>): DeficitsByLevel {
+  const deficits: DeficitsByLevel = { 2: [], 3: [], 4: [] }
   for (const code of ALL_CODES) {
-    let minScore = Infinity
-    for (const scores of pilotScoresMap.values()) {
-      const s = scores[code] ?? 2
-      if (s < minScore) minScore = s
-    }
-    const score = minScore === Infinity ? 2 : minScore
-
-    let levelIndex: number
-    if (score <= 2) levelIndex = 0
-    else if (score <= 3) levelIndex = 1
-    else if (score <= 4) levelIndex = 2
-    else levelIndex = 3
-
-    levels[levelIndex].push(code)
+    const raw = scores[code] ?? 2
+    const s = Math.floor(raw)
+    if (s <= 2) deficits[2].push(code)
+    else if (s === 3) deficits[3].push(code)
+    else if (s === 4) deficits[4].push(code)
   }
+  return deficits
+}
 
-  return levels
+function buildPilotTopCompetencies(
+  scores: Record<CompetencyCode, number | null>
+): CompetencyCode[] {
+  return ALL_CODES.filter((c) => scores[c] === 5)
+}
+
+function pickBest(
+  exercises: TExercise[],
+  isCandidate: (ex: TExercise) => boolean,
+  coverageOf: (ex: TExercise) => number
+): TExercise | null {
+  let best: TExercise | null = null
+  let bestCov = 0
+  let bestTime = Infinity
+  let bestId = Infinity
+
+  for (const ex of exercises) {
+    if (!isCandidate(ex)) continue
+    const cov = coverageOf(ex)
+    if (cov === 0) continue
+    const t = ex.executionTime ?? DEFAULT_EXECUTION_TIME
+
+    if (
+      cov > bestCov ||
+      (cov === bestCov && t < bestTime) ||
+      (cov === bestCov && t === bestTime && ex.id < bestId)
+    ) {
+      best = ex
+      bestCov = cov
+      bestTime = t
+      bestId = ex.id
+    }
+  }
+  return best
+}
+
+type Stage1Result = {
+  selected: TExercise[]
+  usedIds: Set<number>
+  usedTime: number
+  covered: Record<PilotKey, Set<CompetencyCode>>
 }
 
 /**
- * Этап 1: приоритетный выбор упражнений для дефицитных компетенций.
- * Обрабатывает уровни L1→L4 последовательно.
- * Критерий F1: количество покрываемых active-компетенций.
- * Tie-break: меньше executionTime, затем меньше id.
+ * Этап 1: для каждого пилота отдельно — последовательно закрываем дефициты
+ * по уровням q ∈ {2,3,4}. Внутри уровня первым идёт пилот с большим |W_p^q|
+ * (при равенстве — p=1), пилоты чередуются. При нарушении временного лимита
+ * последний кандидат не добавляется и Этап 1 завершается досрочно.
  */
-function stage1CoverageGreedy(
+function stage1(
   exercises: TExercise[],
-  levels: CompetencyCode[][],
+  deficits: Record<PilotKey, DeficitsByLevel>,
   totalTime: number
-): { selected: TExercise[]; covered: Set<CompetencyCode>; usedTime: number } {
+): Stage1Result {
   const selected: TExercise[] = []
-  const covered = new Set<CompetencyCode>()
   const usedIds = new Set<number>()
+  const covered: Record<PilotKey, Set<CompetencyCode>> = {
+    1: new Set(),
+    2: new Set(),
+  }
+  // Изменяемые копии — будем удалять покрытое.
+  const W: Record<PilotKey, DeficitsByLevel> = {
+    1: { 2: [...deficits[1][2]], 3: [...deficits[1][3]], 4: [...deficits[1][4]] },
+    2: { 2: [...deficits[2][2]], 3: [...deficits[2][3]], 4: [...deficits[2][4]] },
+  }
   let usedTime = 0
+  let timeExceeded = false
 
-  for (const level of levels) {
-    let active = level.filter((c) => !covered.has(c))
-    if (active.length === 0) continue
+  for (const q of DEFICIT_LEVELS) {
+    if (timeExceeded) break
 
-    while (active.length > 0) {
-      let bestExercise: TExercise | null = null
-      let bestF1 = 0
-      let bestTime = Infinity
-      let bestId = Infinity
+    const order: PilotKey[] = W[1][q].length >= W[2][q].length ? [1, 2] : [2, 1]
 
-      for (const ex of exercises) {
-        if (usedIds.has(ex.id)) continue
+    while (true) {
+      let progressed = false
 
-        const exTime = ex.executionTime ?? DEFAULT_EXECUTION_TIME
-        const f1 = ex.competencies.filter((c) => active.includes(c)).length
-        if (f1 === 0) continue
+      for (const p of order) {
+        if (timeExceeded) break
+        const wq = W[p][q]
+        if (wq.length === 0) continue
 
-        if (
-          f1 > bestF1 ||
-          (f1 === bestF1 && exTime < bestTime) ||
-          (f1 === bestF1 && exTime === bestTime && ex.id < bestId)
-        ) {
-          bestExercise = ex
-          bestF1 = f1
-          bestTime = exTime
-          bestId = ex.id
+        const wqSet = new Set(wq)
+        const best = pickBest(
+          exercises,
+          (ex) => !usedIds.has(ex.id) && ex.competencies.some((c) => wqSet.has(c)),
+          (ex) => ex.competencies.filter((c) => wqSet.has(c)).length
+        )
+
+        if (!best) {
+          // Нет кандидатов для этого уровня у текущего пилота — не пытаемся снова.
+          W[p][q] = []
+          continue
         }
+
+        const t = best.executionTime ?? DEFAULT_EXECUTION_TIME
+        if (usedTime + t > totalTime) {
+          timeExceeded = true
+          break
+        }
+
+        selected.push({ ...best, step: 'first', pilot: p, role: p === 1 ? 'PF' : 'PM' })
+        usedIds.add(best.id)
+        usedTime += t
+        for (const c of best.competencies) covered[p].add(c)
+        W[p][q] = wq.filter((c) => !best.competencies.includes(c))
+        progressed = true
       }
 
-      if (!bestExercise) break
-
-      const candidateTime = bestExercise.executionTime ?? DEFAULT_EXECUTION_TIME
-      if (usedTime + candidateTime > totalTime) {
-        return { selected, covered, usedTime }
-      }
-
-      selected.push({ ...bestExercise, step: 'first' })
-      usedIds.add(bestExercise.id)
-      usedTime += candidateTime
-
-      for (const c of bestExercise.competencies) {
-        covered.add(c)
-      }
-
-      active = level.filter((c) => !covered.has(c))
+      if (!progressed) break
     }
   }
 
-  return { selected, covered, usedTime }
+  return { selected, usedIds, usedTime, covered }
 }
 
 /**
- * Этап 2: рациональное использование оставшегося времени.
- * Приоритет — непокрытым компетенциям.
- * Критерий F2: (кол-во непокрытых компетенций) / executionTime.
- * Если все покрыты: F2 = (общее кол-во компетенций) / executionTime.
- * Tie-break: меньше executionTime, затем меньше id.
+ * Этап 2: подбор упражнений для компетенций с оценкой 5 (F_p).
+ * Выполняется только при T_rem > 0 и наличии F_p хотя бы у одного пилота.
+ * Первым обслуживается пилот с большим |F_p| (тай-брейк p=1); если у одного
+ * пилота F_p = ∅ — он не обслуживается. После выбора упражнения p* меняется.
+ * Критерий: max покрытия F_p*, затем min t_k, затем min id.
  */
-function stage2EfficiencyGreedy(
+function stage2(
   exercises: TExercise[],
-  usedIdsFromStage1: Set<number>,
-  covered: Set<CompetencyCode>,
-  usedTime: number,
+  state: Stage1Result,
+  topByPilot: Record<PilotKey, CompetencyCode[]>,
   totalTime: number
 ): TExercise[] {
-  const selected: TExercise[] = []
-  const usedIds = new Set(usedIdsFromStage1)
-  const coveredSet = new Set(covered)
-
-  while (true) {
-    const remainingTime = totalTime - usedTime
-
-    const available = exercises.filter((ex) => {
-      if (usedIds.has(ex.id)) return false
-      const exTime = ex.executionTime ?? DEFAULT_EXECUTION_TIME
-      return exTime <= remainingTime
-    })
-
-    if (available.length === 0) break
-
-    const uncoveredExist = ALL_CODES.some((c) => !coveredSet.has(c))
-
-    let candidates: TExercise[]
-    if (uncoveredExist) {
-      candidates = available.filter((ex) => ex.competencies.some((c) => !coveredSet.has(c)))
-      if (candidates.length === 0) {
-        candidates = available
-      }
-    } else {
-      candidates = available
-    }
-
-    let bestExercise: TExercise | null = null
-    let bestF2 = -1
-    let bestTime = Infinity
-    let bestId = Infinity
-
-    for (const ex of candidates) {
-      const exTime = ex.executionTime ?? DEFAULT_EXECUTION_TIME
-
-      let coverageCount: number
-      if (uncoveredExist && ex.competencies.some((c) => !coveredSet.has(c))) {
-        coverageCount = ex.competencies.filter((c) => !coveredSet.has(c)).length
-      } else {
-        coverageCount = ex.competencies.length
-      }
-
-      const f2 = coverageCount / exTime
-
-      if (
-        f2 > bestF2 ||
-        (f2 === bestF2 && exTime < bestTime) ||
-        (f2 === bestF2 && exTime === bestTime && ex.id < bestId)
-      ) {
-        bestExercise = ex
-        bestF2 = f2
-        bestTime = exTime
-        bestId = ex.id
-      }
-    }
-
-    if (!bestExercise) break
-
-    const candidateTime = bestExercise.executionTime ?? DEFAULT_EXECUTION_TIME
-    selected.push({ ...bestExercise, step: 'second' })
-    usedIds.add(bestExercise.id)
-    usedTime += candidateTime
-
-    for (const c of bestExercise.competencies) {
-      coveredSet.add(c)
-    }
+  const F: Record<PilotKey, CompetencyCode[]> = {
+    1: [...topByPilot[1]],
+    2: [...topByPilot[2]],
   }
 
-  return selected
+  let tRem = totalTime - state.usedTime
+  if (tRem <= 0) return []
+  if (F[1].length === 0 && F[2].length === 0) return []
+
+  let pStar: PilotKey
+  if (F[1].length > 0 && F[2].length === 0) pStar = 1
+  else if (F[2].length > 0 && F[1].length === 0) pStar = 2
+  else pStar = F[1].length >= F[2].length ? 1 : 2
+
+  const result: TExercise[] = []
+
+  while (tRem > 0 && (F[1].length > 0 || F[2].length > 0)) {
+    if (F[pStar].length === 0) {
+      const other: PilotKey = pStar === 1 ? 2 : 1
+      if (F[other].length === 0) break
+      pStar = other
+      continue
+    }
+
+    const fSet = new Set(F[pStar])
+    const best = pickBest(
+      exercises,
+      (ex) => !state.usedIds.has(ex.id) && ex.competencies.some((c) => fSet.has(c)),
+      (ex) => ex.competencies.filter((c) => fSet.has(c)).length
+    )
+
+    if (!best) {
+      F[pStar] = []
+      pStar = pStar === 1 ? 2 : 1
+      continue
+    }
+
+    const t = best.executionTime ?? DEFAULT_EXECUTION_TIME
+    if (tRem - t < 0) break
+
+    result.push({ ...best, step: 'second', pilot: pStar, role: pStar === 1 ? 'PF' : 'PM' })
+    state.usedIds.add(best.id)
+    state.usedTime += t
+    tRem -= t
+    for (const c of best.competencies) state.covered[pStar].add(c)
+    F[pStar] = F[pStar].filter((c) => !best.competencies.includes(c))
+    pStar = pStar === 1 ? 2 : 1
+  }
+
+  return result
+}
+
+function emptyScores(): Record<CompetencyCode, number | null> {
+  const s: Record<CompetencyCode, number | null> = {} as Record<CompetencyCode, number | null>
+  for (const c of ALL_CODES) s[c] = null
+  return s
 }
 
 export async function GET(request: Request) {
@@ -239,34 +261,22 @@ export async function GET(request: Request) {
       return NextResponse.json({ exercises: allExercises } as TResponse)
     }
 
-    const pilots: number[] = []
-    if (pilot1Id) pilots.push(Number(pilot1Id))
-    if (pilot2Id) pilots.push(Number(pilot2Id))
+    const scores1 = pilot1Id ? await getPilotScores(Number(pilot1Id)) : emptyScores()
+    const scores2 = pilot2Id ? await getPilotScores(Number(pilot2Id)) : emptyScores()
 
-    const pilotScoresMap = new Map<number, Record<CompetencyCode, number | null>>()
-    for (const pid of pilots) {
-      pilotScoresMap.set(pid, await getPilotScores(pid))
+    const deficits: Record<PilotKey, DeficitsByLevel> = {
+      1: buildPilotDeficits(scores1),
+      2: buildPilotDeficits(scores2),
+    }
+    const top: Record<PilotKey, CompetencyCode[]> = {
+      1: buildPilotTopCompetencies(scores1),
+      2: buildPilotTopCompetencies(scores2),
     }
 
-    const levels = buildPriorityLevels(pilotScoresMap)
+    const stage1Result = stage1(allExercises, deficits, T)
+    const stage2Exercises = stage2(allExercises, stage1Result, top, T)
 
-    const {
-      selected: stage1Exercises,
-      covered,
-      usedTime,
-    } = stage1CoverageGreedy(allExercises, levels, T)
-
-    const usedIdsFromStage1 = new Set(stage1Exercises.map((ex) => ex.id))
-
-    const stage2Exercises = stage2EfficiencyGreedy(
-      allExercises,
-      usedIdsFromStage1,
-      covered,
-      usedTime,
-      T
-    )
-
-    const exercises = [...stage1Exercises, ...stage2Exercises]
+    const exercises = [...stage1Result.selected, ...stage2Exercises]
 
     return NextResponse.json({ exercises } as TResponse)
   } catch (error) {
