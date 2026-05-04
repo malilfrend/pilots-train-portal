@@ -70,6 +70,17 @@ export function ExerciseList({ exercises, onDelete }: TProps) {
                       </span>
                     )}
                   </span>
+                  {exercise.targetCompetency && (
+                    <>
+                      <span>|</span>
+                      <span
+                        className="px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200"
+                        title={COMPETENCIES[exercise.targetCompetency]?.description}
+                      >
+                        Цель: {exercise.targetCompetency}
+                      </span>
+                    </>
+                  )}
                 </>
               )}
             </div>

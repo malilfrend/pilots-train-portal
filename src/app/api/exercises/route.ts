@@ -80,16 +80,19 @@ function pickBest(
 
 type Stage1Result = {
   selected: TExercise[]
-  usedIds: Set<number>
+  usedByPilot: Record<PilotKey, Set<number>>
   usedTime: number
   covered: Record<PilotKey, Set<CompetencyCode>>
 }
 
 /**
- * Этап 1: для каждого пилота отдельно — последовательно закрываем дефициты
- * по уровням q ∈ {2,3,4}. Внутри уровня первым идёт пилот с большим |W_p^q|
- * (при равенстве — p=1), пилоты чередуются. При нарушении временного лимита
- * последний кандидат не добавляется и Этап 1 завершается досрочно.
+ * Этап 1 (адресный): для каждого пилота, по уровням q ∈ {2,3,4}, выбирается
+ * j* — первая (по порядку ALL_CODES) непокрытая компетенция из L_p(q),
+ * и под неё подбирается упражнение с максимальным общим числом компетенций
+ * среди не использованных ДАННЫМ пилотом (тай-брейк: min t, min id).
+ * В покрытие и в L_p(q) обновляется только j* — даже если упражнение покрывает
+ * больше. Пилоты чередуются после каждого упражнения. При превышении T —
+ * последнее упражнение не добавляется и этап завершается досрочно.
  */
 function stage1(
   exercises: TExercise[],
@@ -97,13 +100,9 @@ function stage1(
   totalTime: number
 ): Stage1Result {
   const selected: TExercise[] = []
-  const usedIds = new Set<number>()
-  const covered: Record<PilotKey, Set<CompetencyCode>> = {
-    1: new Set(),
-    2: new Set(),
-  }
-  // Изменяемые копии — будем удалять покрытое.
-  const W: Record<PilotKey, DeficitsByLevel> = {
+  const usedByPilot: Record<PilotKey, Set<number>> = { 1: new Set(), 2: new Set() }
+  const covered: Record<PilotKey, Set<CompetencyCode>> = { 1: new Set(), 2: new Set() }
+  const L: Record<PilotKey, DeficitsByLevel> = {
     1: { 2: [...deficits[1][2]], 3: [...deficits[1][3]], 4: [...deficits[1][4]] },
     2: { 2: [...deficits[2][2]], 3: [...deficits[2][3]], 4: [...deficits[2][4]] },
   }
@@ -113,48 +112,58 @@ function stage1(
   for (const q of DEFICIT_LEVELS) {
     if (timeExceeded) break
 
-    const order: PilotKey[] = W[1][q].length >= W[2][q].length ? [1, 2] : [2, 1]
+    let pStar: PilotKey = L[1][q].length >= L[2][q].length ? 1 : 2
 
-    while (true) {
-      let progressed = false
+    while (L[1][q].length > 0 || L[2][q].length > 0) {
+      if (timeExceeded) break
 
-      for (const p of order) {
-        if (timeExceeded) break
-        const wq = W[p][q]
-        if (wq.length === 0) continue
-
-        const wqSet = new Set(wq)
-        const best = pickBest(
-          exercises,
-          (ex) => !usedIds.has(ex.id) && ex.competencies.some((c) => wqSet.has(c)),
-          (ex) => ex.competencies.filter((c) => wqSet.has(c)).length
-        )
-
-        if (!best) {
-          // Нет кандидатов для этого уровня у текущего пилота — не пытаемся снова.
-          W[p][q] = []
-          continue
-        }
-
-        const t = best.executionTime ?? DEFAULT_EXECUTION_TIME
-        if (usedTime + t > totalTime) {
-          timeExceeded = true
-          break
-        }
-
-        selected.push({ ...best, step: 'first', pilot: p, role: p === 1 ? 'PF' : 'PM' })
-        usedIds.add(best.id)
-        usedTime += t
-        for (const c of best.competencies) covered[p].add(c)
-        W[p][q] = wq.filter((c) => !best.competencies.includes(c))
-        progressed = true
+      if (L[pStar][q].length === 0) {
+        pStar = pStar === 1 ? 2 : 1
+        continue
       }
 
-      if (!progressed) break
+      const jStar = ALL_CODES.find((c) => L[pStar][q].includes(c))
+      if (!jStar) {
+        pStar = pStar === 1 ? 2 : 1
+        continue
+      }
+
+      const p = pStar
+      const best = pickBest(
+        exercises,
+        (ex) => !usedByPilot[p].has(ex.id) && ex.competencies.includes(jStar),
+        (ex) => ex.competencies.length
+      )
+
+      if (!best) {
+        // Под целевую компетенцию нет кандидатов — она остаётся непокрытой.
+        L[pStar][q] = L[pStar][q].filter((c) => c !== jStar)
+        pStar = pStar === 1 ? 2 : 1
+        continue
+      }
+
+      const t = best.executionTime ?? DEFAULT_EXECUTION_TIME
+      if (usedTime + t > totalTime) {
+        timeExceeded = true
+        break
+      }
+
+      selected.push({
+        ...best,
+        step: 'first',
+        pilot: pStar,
+        role: pStar === 1 ? 'PF' : 'PM',
+        targetCompetency: jStar,
+      })
+      usedByPilot[pStar].add(best.id)
+      usedTime += t
+      covered[pStar].add(jStar)
+      L[pStar][q] = L[pStar][q].filter((c) => c !== jStar)
+      pStar = pStar === 1 ? 2 : 1
     }
   }
 
-  return { selected, usedIds, usedTime, covered }
+  return { selected, usedByPilot, usedTime, covered }
 }
 
 /**
@@ -197,7 +206,10 @@ function stage2(
     const fSet = new Set(F[pStar])
     const best = pickBest(
       exercises,
-      (ex) => !state.usedIds.has(ex.id) && ex.competencies.some((c) => fSet.has(c)),
+      (ex) =>
+        !state.usedByPilot[1].has(ex.id) &&
+        !state.usedByPilot[2].has(ex.id) &&
+        ex.competencies.some((c) => fSet.has(c)),
       (ex) => ex.competencies.filter((c) => fSet.has(c)).length
     )
 
@@ -211,7 +223,7 @@ function stage2(
     if (tRem - t < 0) break
 
     result.push({ ...best, step: 'second', pilot: pStar, role: pStar === 1 ? 'PF' : 'PM' })
-    state.usedIds.add(best.id)
+    state.usedByPilot[pStar].add(best.id)
     state.usedTime += t
     tRem -= t
     for (const c of best.competencies) state.covered[pStar].add(c)
