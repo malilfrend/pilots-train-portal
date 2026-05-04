@@ -171,10 +171,17 @@ async function main() {
       return v !== null && (v?.toString()?.toLowerCase() === 'x' || v === true)
     })
 
+    const timeRaw = row.Time
+    const executionTime =
+      timeRaw === null || timeRaw === undefined || timeRaw === ''
+        ? null
+        : Number(timeRaw)
+
     // Создаём упражнение с вложенной вставкой компетенций
     const exercise = await prisma.exercise.create({
       data: {
         name,
+        executionTime,
         competencies: {
           create: comps.map(code => ({
             competencyCode: code as CompetencyCode
@@ -183,7 +190,7 @@ async function main() {
       }
     })
 
-    console.log(`Добавлено упражнение #${exercise.id}: "${name}" → [${comps.join(', ')}]`)
+    console.log(`Добавлено упражнение #${exercise.id}: "${name}" (${executionTime ?? '—'} мин) → [${comps.join(', ')}]`)
   }
 
   console.log('Все упражнения загружены.')

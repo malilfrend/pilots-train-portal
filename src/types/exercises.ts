@@ -8,4 +8,5 @@ export type TExercise = {
   step?: 'first' | 'second'
   pilot?: 1 | 2
   role?: 'PF' | 'PM'
+  targetCompetency?: CompetencyCode
 }
