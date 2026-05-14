@@ -10,10 +10,12 @@ async function main() {
 
   // Сначала удаляем данные из зависимых таблиц
   try {
-    await prisma.pilotCompetencyScore.deleteMany({})
-    console.log('Удалены записи из PilotCompetencyScore')
+    await prisma.sessionExercise.deleteMany({})
+    await prisma.sessionScore.deleteMany({})
+    await prisma.session.deleteMany({})
+    console.log('Удалены записи из Session/SessionScore/SessionExercise')
   } catch (e) {
-    console.log('Таблица PilotCompetencyScore не существует или не может быть очищена')
+    console.log('Таблицы сессий не существуют или не могут быть очищены')
   }
 
   try {
@@ -133,18 +135,28 @@ async function main() {
     CompetencyCode.WLM,
   ];
 
-  // Генерируем оценки для каждого пилота и компетенции (одна оценка на компетенцию)
+  // Создаём legacy-сессии с тестовыми оценками для каждого пилота
   for (const pilot of [vertoletovPilot, poletaevPilot]) {
+    const session = await prisma.session.create({
+      data: {
+        instructorId: mentor.id,
+        pilot1Id: pilot.id,
+        pilot2Id: pilot.id,
+        totalTime: 0,
+        totalValue: 0,
+        date: new Date('2024-02-10'),
+        isLegacy: true,
+      },
+    })
     for (const code of allCompetencyCodes) {
-      await prisma.pilotCompetencyScore.create({
+      await prisma.sessionScore.create({
         data: {
+          sessionId: session.id,
           pilotId: pilot.id,
-          instructorId: mentor.id,
           competencyCode: code,
-          score: Math.floor(Math.random() * 4) + 2, // случайная оценка 2-5
-          date: new Date('2024-02-10'),
+          score: Math.floor(Math.random() * 4) + 2,
           comment: `Тестовая оценка для ${code}`,
-        }
+        },
       })
     }
   }

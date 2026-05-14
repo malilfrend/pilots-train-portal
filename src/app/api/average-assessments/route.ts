@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { CompetencyCode } from '@/types/assessment'
-import { getPilotAssessments } from '@/lib/assessments'
+import { getLatestPilotScores } from '@/lib/assessments'
 
 export type TPilotWithAssessments = {
   pilotId: number
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
             },
           },
         })
-        const pilot1Scores = await getPilotAssessments(Number(pilot1Id))
+        const pilot1Scores = await getLatestPilotScores(Number(pilot1Id))
 
         pilots.pilot1 = {
           pilotId: Number(pilot1Id),
@@ -70,7 +70,7 @@ export async function GET(request: Request) {
             },
           },
         })
-        const pilot2Scores = await getPilotAssessments(Number(pilot2Id))
+        const pilot2Scores = await getLatestPilotScores(Number(pilot2Id))
 
         pilots.pilot2 = {
           pilotId: Number(pilot2Id),

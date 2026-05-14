@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyToken } from '@/lib/auth'
-import { getPilotAssessments } from '@/lib/assessments'
+import { getLatestPilotScores } from '@/lib/assessments'
 import prisma from '@/lib/prisma'
 
 export async function POST(request: Request) {
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Пилот не найден' }, { status: 404 })
     }
 
-    const scores = await getPilotAssessments(pilotId)
+    const scores = await getLatestPilotScores(pilotId)
 
     return NextResponse.json({ scores })
   } catch (error) {

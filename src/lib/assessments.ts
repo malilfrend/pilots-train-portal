@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma'
 import { CompetencyCode } from '@/types/assessment'
+import { ALL_CODES } from '@/lib/exerciseSelection'
 
 /**
  * Получает данные пилота по ID профиля
@@ -11,27 +12,33 @@ export async function getPilotByProfileId(profileId: number) {
 }
 
 /**
- * Получает оценки пилота по компетенциям
- * Возвращает Record<CompetencyCode, number | null>
+ * Возвращает «последние» оценки пилота по компетенциям —
+ * берёт самые свежие SessionScore по дате сессии (включая legacy-сессии).
  */
-export async function getPilotAssessments(
+export async function getLatestPilotScores(
   pilotId: number
 ): Promise<Record<CompetencyCode, number | null>> {
-  const scores = await prisma.pilotCompetencyScore.findMany({
+  const rows = await prisma.sessionScore.findMany({
     where: { pilotId },
-    select: {
-      competencyCode: true,
-      score: true,
-    },
+    include: { session: { select: { date: true, id: true } } },
   })
 
-  const allCodes: CompetencyCode[] = ['PRO', 'COM', 'FPA', 'FPM', 'LTW', 'PSD', 'SAW', 'WLM']
-
-  const result = {} as Record<CompetencyCode, number | null>
-  for (const code of allCodes) {
-    const found = scores.find((s) => s.competencyCode === code)
-    result[code] = found ? found.score : null
+  const latest = new Map<CompetencyCode, { date: Date; sessionId: number; score: number }>()
+  for (const r of rows) {
+    const code = r.competencyCode as CompetencyCode
+    const prev = latest.get(code)
+    if (
+      !prev ||
+      r.session.date > prev.date ||
+      (r.session.date.getTime() === prev.date.getTime() && r.session.id > prev.sessionId)
+    ) {
+      latest.set(code, { date: r.session.date, sessionId: r.session.id, score: r.score })
+    }
   }
 
+  const result = {} as Record<CompetencyCode, number | null>
+  for (const code of ALL_CODES) {
+    result[code as CompetencyCode] = latest.get(code as CompetencyCode)?.score ?? null
+  }
   return result
 }

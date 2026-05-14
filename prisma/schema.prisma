@@ -51,8 +51,10 @@ model Pilot {
   id              Int                @id @default(autoincrement())
   profile         UserProfile        @relation(fields: [profileId], references: [id])
   profileId       Int                @unique  // Один профиль - один пилот
-  
-  competencyScores PilotCompetencyScore[] // Оценки пилота по компетенциям
+
+  pilot1Sessions  Session[]          @relation("Pilot1Sessions")
+  pilot2Sessions  Session[]          @relation("Pilot2Sessions")
+  sessionScores   SessionScore[]
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 }
@@ -62,26 +64,68 @@ model Instructor {
   id                  Int                @id @default(autoincrement())
   profile             UserProfile        @relation(fields: [profileId], references: [id])
   profileId           Int                @unique  // Один профиль - один инструктор
-  createdScores       PilotCompetencyScore[] // Оценки, созданные инструктором
+  sessions            Session[]          // Сессии, проведённые инструктором
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
 }
 
-// Оценки пилота по компетенциям
-model PilotCompetencyScore {
-  id              Int                 @id @default(autoincrement())
-  pilot           Pilot               @relation(fields: [pilotId], references: [id])
-  pilotId         Int
-  instructor      Instructor          @relation(fields: [instructorId], references: [id])
+// Тренажёрная сессия (immutable после создания)
+model Session {
+  id              Int               @id @default(autoincrement())
+  instructor      Instructor        @relation(fields: [instructorId], references: [id])
   instructorId    Int
-  competencyCode  CompetencyCode      // Код компетенции
-  score           Int                 // Оценка по шкале (2-5)
-  date            DateTime            // Дата выставления оценки
-  comment         String?             // Комментарий инструктора
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  pilot1          Pilot             @relation("Pilot1Sessions", fields: [pilot1Id], references: [id])
+  pilot1Id        Int
+  pilot2          Pilot             @relation("Pilot2Sessions", fields: [pilot2Id], references: [id])
+  pilot2Id        Int
+  totalTime       Int               // T в минутах
+  totalValue      Int               // сумма v_k по упражнениям сценария
+  date            DateTime          @default(now())
+  isLegacy        Boolean           @default(false) // backfill из старой таблицы оценок
+  createdAt       DateTime          @default(now())
 
-  @@unique([pilotId, competencyCode]) // Уникальное сочетание пилота и компетенции
+  scores          SessionScore[]
+  exercises       SessionExercise[]
+
+  @@index([pilot1Id])
+  @@index([pilot2Id])
+  @@index([instructorId])
+  @@index([date])
+}
+
+// Оценка пилота по компетенции в рамках конкретной сессии
+model SessionScore {
+  id              Int               @id @default(autoincrement())
+  session         Session           @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId       Int
+  pilot           Pilot             @relation(fields: [pilotId], references: [id])
+  pilotId         Int
+  competencyCode  CompetencyCode
+  score           Int               // 2..5
+  comment         String?
+
+  @@unique([sessionId, pilotId, competencyCode])
+  @@index([pilotId, competencyCode])
+}
+
+// Снапшот упражнения, выполненного в сессии
+model SessionExercise {
+  id              Int               @id @default(autoincrement())
+  session         Session           @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId       Int
+  order           Int               // порядок в финальном списке
+  exercise        Exercise          @relation(fields: [exerciseId], references: [id])
+  exerciseId      Int
+
+  name            String
+  executionTime   Int
+  value           Int
+  pilot           Int?              // 1 | 2, кому рекомендован PF
+  role            String?           // 'PF' | 'PM'
+  forBothPilots   Boolean           @default(false) // упражнение одинаково ценно обоим
+
+  @@unique([sessionId, order])
+  @@index([exerciseId])
 }
 
 // Упражнение со связкой с компетенциями
@@ -97,6 +141,8 @@ model Exercise {
 
   /// Связь с компетенциями, которые развивает это упражнение
   competencies ExerciseCompetency[]
+
+  sessionExercises SessionExercise[]
 
   createdAt   DateTime                  @default(now())
   updatedAt   DateTime                  @updatedAt
